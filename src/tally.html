@@ -1,0 +1,1664 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Tally</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: one-column logbook. Sticky header with tabs; tree of tally rows; orange marks anything currently timing. */
+:root {
+  --bg: #eef1f0; --surface: #ffffff; --sunk: #e3e8e6; --line: #cfd7d4;
+  --fg: #17211f; --muted: #5b6965; --accent: #1d5566; --accent-fg: #ffffff;
+  --run: #d4561c; --run-soft: #fbe6dc; --danger: #b3261e; --danger-soft: #f8e1df; --good: #2f7a4d;
+  --f-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
+  --f-num: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --r: 10px;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #111816; --surface: #19221f; --sunk: #0d1311; --line: #2b3733;
+  --fg: #e6eeeb; --muted: #94a5a0; --accent: #6fb3c6; --accent-fg: #0b1a1f;
+  --run: #f08a52; --run-soft: #3a2116; --danger: #f2877f; --danger-soft: #3a1b19; --good: #6fc591; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #111816; --surface: #19221f; --sunk: #0d1311; --line: #2b3733;
+  --fg: #e6eeeb; --muted: #94a5a0; --accent: #6fb3c6; --accent-fg: #0b1a1f;
+  --run: #f08a52; --run-soft: #3a2116; --danger: #f2877f; --danger-soft: #3a1b19; --good: #6fc591; color-scheme: dark }
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--fg); font: 15px/1.45 var(--f-body); }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+.wrap { max-width: 720px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+header.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); }
+header.top .wrap { padding-block: 12px 0; display: flex; flex-direction: column; gap: 10px; }
+.brand { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.brand h1 { margin: 0; font: 800 26px/1 var(--f-display); letter-spacing: -0.02em; }
+.brand h1 b { color: var(--run); font-weight: 800; }
+.sync { font-size: 12px; color: var(--muted); letter-spacing: .04em; text-transform: uppercase; }
+nav.tabs { display: flex; gap: 4px; }
+nav.tabs button { flex: 1; background: none; border: 0; border-bottom: 3px solid transparent; color: var(--muted);
+  font: 600 15px var(--f-body); padding: 10px 4px 9px; cursor: pointer; min-height: 44px; }
+nav.tabs button[aria-current="page"] { color: var(--fg); border-bottom-color: var(--accent); }
+main.wrap { padding-block: 16px 96px; }
+
+/* layout helpers */
+.stack { display: flex; flex-direction: column; gap: 12px; }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.spread { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.grow { flex: 1; min-width: 0; }
+.h2 { font: 600 18px/1.2 var(--f-display); margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+.num { font-family: var(--f-num); font-variant-numeric: tabular-nums; font-size: .93em; }
+.path { font-size: 12.5px; color: var(--muted); overflow-wrap: anywhere; }
+
+/* buttons */
+.btn { appearance: none; border: 1px solid var(--line); background: var(--surface); color: var(--fg);
+  font: 600 14px var(--f-body); min-height: 40px; padding: 0 14px; border-radius: 8px; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px; white-space: nowrap; }
+.btn:hover { border-color: var(--muted); }
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: .5; cursor: default; }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: var(--accent-fg); }
+.btn-ghost { background: transparent; border-color: transparent; color: var(--accent); }
+.btn-ghost:hover { border-color: var(--line); }
+.btn-danger { background: var(--danger); border-color: var(--danger); color: var(--surface); }
+.btn-run { background: var(--run); border-color: var(--run); color: #fff; }
+.btn-sm { min-height: 34px; padding: 0 10px; font-size: 13px; }
+.btn-icon { width: 40px; padding: 0; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.seg { display: inline-flex; background: var(--sunk); border-radius: 9px; padding: 3px; gap: 2px; max-width: 100%; overflow-x: auto; }
+.seg button { appearance: none; border: 0; background: transparent; color: var(--muted); font: 600 13px var(--f-body);
+  min-height: 34px; padding: 0 12px; border-radius: 7px; cursor: pointer; white-space: nowrap; }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--fg); box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+
+/* forms */
+.field { display: flex; flex-direction: column; gap: 4px; min-width: 0; flex: 1 1 160px; }
+.field > label { font-size: 12px; font-weight: 600; color: var(--muted); letter-spacing: .05em; text-transform: uppercase; }
+.field-row { display: flex; flex-wrap: wrap; gap: 12px; }
+input, select, textarea { font: 15px var(--f-body); color: var(--fg); background: var(--surface); border: 1px solid var(--line);
+  border-radius: 8px; min-height: 42px; padding: 8px 10px; width: 100%; min-width: 0; }
+input[type="checkbox"], input[type="radio"] { width: 20px; min-height: 20px; height: 20px; accent-color: var(--accent); }
+label:has(> input[type="checkbox"]), label:has(> input[type="radio"]) { display: inline-flex; align-items: center; gap: 8px; text-transform: none; letter-spacing: 0; font-size: 14px; color: var(--fg); font-weight: 500; }
+textarea { min-height: 70px; }
+
+/* containers */
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+.list { list-style: none; margin: 0; padding: 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.list-item { padding: 12px 14px; padding-left: calc(14px + var(--depth, 0) * 18px); border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.list > .list-item:first-child, .list > :first-child > .list-item:first-child { border-top: 0; }
+.list .h2, .list-head { font-size: 12px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+
+/* tree rows */
+.node { display: flex; align-items: center; gap: 8px; padding: 10px 12px 10px calc(8px + var(--depth, 0) * 20px);
+  background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); position: relative; flex-wrap: wrap; }
+.stack:has(> .node) { gap: 6px; }
+.node:not([style*="--depth:0"]) { background: color-mix(in srgb, var(--surface) 55%, var(--bg)); }
+#view > * + * { margin-top: 14px; }
+.node.is-running { border-color: var(--run); box-shadow: inset 4px 0 0 var(--run); }
+.node-main { display: flex; flex-direction: column; gap: 2px; min-width: 120px; }
+.node-name { font-weight: 600; font-size: 16px; cursor: pointer; overflow-wrap: anywhere; }
+.node-name:hover { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+.node-meta { font-size: 13px; color: var(--muted); font-family: var(--f-num); font-variant-numeric: tabular-nums; }
+.node-actions { display: flex; gap: 6px; flex-wrap: wrap; margin-left: auto; }
+.twisty { appearance: none; border: 0; background: none; color: var(--muted); width: 28px; min-height: 40px; font-size: 14px; cursor: pointer; padding: 0; }
+.node:not(:has(.twisty)) .node-main { padding-left: 28px; }
+
+.chip { display: inline-flex; align-items: center; gap: 4px; font: 600 11.5px var(--f-body); letter-spacing: .03em; padding: 2px 8px; border-radius: 99px; background: var(--sunk); color: var(--muted); }
+.chip-run { background: var(--run-soft); color: var(--run); }
+.chip-run::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; animation: pulse 1.4s ease-in-out infinite; }
+.chip-mode { text-transform: uppercase; }
+@keyframes pulse { 50% { opacity: .25; } }
+@media (prefers-reduced-motion: reduce) { .chip-run::before { animation: none; } }
+
+.empty { text-align: center; color: var(--muted); padding: 32px 16px; border: 1px dashed var(--line); border-radius: var(--r); display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.confirm { background: var(--danger-soft); border: 1px solid color-mix(in srgb, var(--danger) 40%, transparent); color: var(--fg); border-radius: 8px; padding: 10px 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+[role="alert"]:empty { display: none; }
+
+.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%) translateY(20px);
+  background: var(--fg); color: var(--bg); padding: 10px 16px; border-radius: 99px; font-weight: 600; font-size: 14px; opacity: 0;
+  transition: opacity .2s, transform .2s; pointer-events: none; max-width: calc(100% - 32px); z-index: 20; }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+.loading { color: var(--muted); padding: 40px 0; text-align: center; }
+</style>
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand"><h1>Tally<b>.</b></h1><span class="sync" id="sync">Loading</span></div>
+    <nav class="tabs" aria-label="Sections">
+      <button type="button" id="tab-track" data-tab="track">Track</button>
+      <button type="button" id="tab-history" data-tab="history">History</button>
+      <button type="button" id="tab-manage" data-tab="manage">Events</button>
+    </nav>
+  </div>
+</header>
+<main class="wrap" id="view"><div class="loading">Loading your events…</div></main>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(function(){
+  globalThis.ET = globalThis.ET || {};
+
+  var DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  var ID_CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+
+  function pad2(n) { return (n < 10 ? '0' : '') + n; }
+  function norm(v) { return v == null ? null : v; }
+  function safeMs(ms) { return ms > 0 ? ms : 0; }
+
+  function byOrderName(a, b) {
+    var oa = a.order || 0, ob = b.order || 0;
+    if (oa !== ob) return oa - ob;
+    return String(a.name || '').localeCompare(String(b.name || ''));
+  }
+
+  // parentId -> array of child nodes (unsorted)
+  function indexChildren(nodes) {
+    var kids = new Map();
+    nodes.forEach(function(n) {
+      var p = norm(n.parentId);
+      if (!kids.has(p)) kids.set(p, []);
+      kids.get(p).push(n);
+    });
+    return kids;
+  }
+
+  function descendantIdsIndexed(kids, id) {
+    var out = [], seen = new Set(), stack = [id];
+    while (stack.length) {
+      var cur = stack.pop();
+      if (seen.has(cur)) continue;
+      seen.add(cur);
+      out.push(cur);
+      (kids.get(cur) || []).forEach(function(c) { stack.push(c.id); });
+    }
+    return out;
+  }
+
+  function children(nodes, parentId) {
+    var p = norm(parentId);
+    return nodes.filter(function(n) { return norm(n.parentId) === p; }).sort(byOrderName);
+  }
+
+  function descendantIds(nodes, id) {
+    return descendantIdsIndexed(indexChildren(nodes), id);
+  }
+
+  function wouldCycle(nodes, nodeId, newParentId) {
+    var np = norm(newParentId);
+    if (np === null) return false;
+    if (np === nodeId) return true;
+    return descendantIds(nodes, nodeId).indexOf(np) !== -1;
+  }
+
+  function path(nodes, id) {
+    var byId = new Map();
+    nodes.forEach(function(n) { byId.set(n.id, n); });
+    if (!byId.has(id)) return [];
+    var out = [], seen = new Set(), cur = id;
+    while (cur !== null && byId.has(cur) && !seen.has(cur)) {
+      seen.add(cur);
+      var n = byId.get(cur);
+      out.push(n);
+      cur = norm(n.parentId);
+    }
+    return out.reverse();
+  }
+
+  function pathLabel(nodes, id) {
+    return path(nodes, id).map(function(n) { return n.name; }).join(' › ');
+  }
+
+  function flatTree(nodes) {
+    var ids = new Set();
+    nodes.forEach(function(n) { ids.add(n.id); });
+    var kids = indexChildren(nodes);
+    var seen = new Set(), out = [];
+
+    function walk(node, depth) {
+      if (seen.has(node.id)) return;
+      seen.add(node.id);
+      out.push({ node: node, depth: depth });
+      (kids.get(node.id) || []).slice().sort(byOrderName).forEach(function(c) {
+        walk(c, depth + 1);
+      });
+    }
+
+    // Roots: top level, or parent points at a node that does not exist.
+    nodes.filter(function(n) {
+      var p = norm(n.parentId);
+      return p === null || !ids.has(p);
+    }).sort(byOrderName).forEach(function(r) { walk(r, 0); });
+
+    // Nodes only reachable through a parent cycle: show them as roots too.
+    nodes.slice().sort(byOrderName).forEach(function(n) {
+      if (!seen.has(n.id)) walk(n, 0);
+    });
+
+    return out;
+  }
+
+  function entryDuration(entry, now) {
+    var end = entry.end == null ? now : entry.end;
+    return safeMs(end - entry.start);
+  }
+
+  function periodRange(period, now) {
+    var d = new Date(now);
+    var y = d.getFullYear(), m = d.getMonth(), day = d.getDate();
+    switch (period) {
+      case 'today':
+        return { from: new Date(y, m, day).getTime(), to: new Date(y, m, day + 1).getTime() };
+      case 'week':
+        var off = (d.getDay() + 6) % 7; // days since Monday
+        return { from: new Date(y, m, day - off).getTime(), to: new Date(y, m, day - off + 7).getTime() };
+      case 'month':
+        return { from: new Date(y, m, 1).getTime(), to: new Date(y, m + 1, 1).getTime() };
+      case 'year':
+        return { from: new Date(y, 0, 1).getTime(), to: new Date(y + 1, 0, 1).getTime() };
+      case 'all':
+        return { from: 0, to: Infinity };
+      default:
+        throw new Error('Unknown period: ' + period);
+    }
+  }
+
+  function aggregate(nodes, entries, opts) {
+    opts = opts || {};
+    var from = opts.from == null ? 0 : opts.from;
+    var to = opts.to == null ? Infinity : opts.to;
+    var now = opts.now == null ? Date.now() : opts.now;
+
+    // Per-node values from the node's own entries only.
+    var own = new Map();
+    nodes.forEach(function(n) {
+      own.set(n.id, { ownCount: 0, ownMs: 0, running: 0, last: null });
+    });
+    (entries || []).forEach(function(e) {
+      var o = own.get(e.nodeId);
+      if (!o) return;
+      if (e.start >= from && e.start < to) {
+        o.ownCount += e.count || 0;
+        o.ownMs += entryDuration(e, now);
+      }
+      if (e.end == null) o.running += 1;
+      if (o.last === null || e.start > o.last) o.last = e.start;
+    });
+
+    // Roll up node + all descendants.
+    var kids = indexChildren(nodes);
+    var out = {};
+    nodes.forEach(function(n) {
+      var self = own.get(n.id);
+      var totalCount = 0, totalMs = 0, runningCount = 0, lastStart = null;
+      descendantIdsIndexed(kids, n.id).forEach(function(id) {
+        var o = own.get(id);
+        if (!o) return;
+        totalCount += o.ownCount;
+        totalMs += o.ownMs;
+        runningCount += o.running;
+        if (o.last !== null && (lastStart === null || o.last > lastStart)) lastStart = o.last;
+      });
+      out[n.id] = {
+        ownCount: self.ownCount,
+        ownMs: self.ownMs,
+        totalCount: totalCount,
+        totalMs: totalMs,
+        runningCount: runningCount,
+        lastStart: lastStart
+      };
+    });
+    return out;
+  }
+
+  function running(entries) {
+    return entries.filter(function(e) { return e.end == null; });
+  }
+
+  function fmtDuration(ms) {
+    var total = Math.floor(safeMs(ms) / 1000);
+    if (total < 3600) {
+      return Math.floor(total / 60) + ':' + pad2(total % 60);
+    }
+    if (total < 86400) {
+      var h = Math.floor(total / 3600);
+      return h + ':' + pad2(Math.floor(total / 60) % 60) + ':' + pad2(total % 60);
+    }
+    var d = Math.floor(total / 86400);
+    var rem = total % 86400;
+    return d + 'd ' + Math.floor(rem / 3600) + 'h ' + pad2(Math.floor(rem / 60) % 60) + 'm';
+  }
+
+  function fmtShort(ms) {
+    var total = Math.floor(safeMs(ms) / 1000);
+    if (total > 0 && total < 60) return total + 's';
+    var mins = Math.floor(total / 60);
+    if (mins < 60) return mins + 'm';
+    return Math.floor(mins / 60) + 'h ' + pad2(mins % 60) + 'm';
+  }
+
+  function toLocalInput(ms) {
+    if (ms == null || isNaN(ms)) return '';
+    var d = new Date(ms);
+    return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate()) +
+      'T' + pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+  }
+
+  function fromLocalInput(str) {
+    if (!str) return null;
+    var m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(String(str).trim());
+    if (!m) return null;
+    var y = +m[1], mo = +m[2] - 1, day = +m[3], h = +m[4], mi = +m[5], s = m[6] ? +m[6] : 0;
+    var d = new Date(y, mo, day, h, mi, s);
+    // Reject overflowed values such as 2026-02-31 or 25:00.
+    if (d.getFullYear() !== y || d.getMonth() !== mo || d.getDate() !== day ||
+        d.getHours() !== h || d.getMinutes() !== mi) return null;
+    return d.getTime();
+  }
+
+  function fmtWhen(ms, now) {
+    var d = new Date(ms);
+    var n = new Date(now == null ? Date.now() : now);
+    var time = pad2(d.getHours()) + ':' + pad2(d.getMinutes());
+    var day = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    var today = new Date(n.getFullYear(), n.getMonth(), n.getDate()).getTime();
+    var yesterday = new Date(n.getFullYear(), n.getMonth(), n.getDate() - 1).getTime();
+    if (day === today) return 'Today ' + time;
+    if (day === yesterday) return 'Yesterday ' + time;
+    return DAYS[d.getDay()] + ' ' + d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + time;
+  }
+
+  function uid() {
+    var out = '';
+    var c = globalThis.crypto;
+    while (out.length < 16) {
+      var buf = new Uint8Array(16);
+      if (c && c.getRandomValues) {
+        c.getRandomValues(buf);
+      } else {
+        for (var j = 0; j < buf.length; j++) buf[j] = Math.floor(Math.random() * 256);
+      }
+      for (var i = 0; i < buf.length && out.length < 16; i++) {
+        // 248 = 62 * 4, so accepting only bytes below it avoids modulo bias.
+        if (buf[i] < 248) out += ID_CHARS[buf[i] % 62];
+      }
+    }
+    return out;
+  }
+
+  ET.model = {
+    children: children,
+    descendantIds: descendantIds,
+    wouldCycle: wouldCycle,
+    path: path,
+    pathLabel: pathLabel,
+    flatTree: flatTree,
+    entryDuration: entryDuration,
+    periodRange: periodRange,
+    aggregate: aggregate,
+    running: running,
+    fmtDuration: fmtDuration,
+    fmtShort: fmtShort,
+    toLocalInput: toLocalInput,
+    fromLocalInput: fromLocalInput,
+    fmtWhen: fmtWhen,
+    uid: uid
+  };
+
+  if (typeof module !== 'undefined') module.exports = ET.model;
+})();
+
+</script>
+<script>
+/* Tally store: shared db capability when available, browser storage otherwise. */
+(function () {
+  var ET = (globalThis.ET = globalThis.ET || {});
+  var cache = { nodes: {}, entries: {} };
+  var listeners = [];
+  var backend = null; // { kind, write(coll,id,data), remove(coll,id) }
+  var ready = false;
+  var LS_KEY = "tally.v1";
+
+  function emit() { listeners.forEach(function (fn) { try { fn(); } catch (e) { console.error(e); } }); }
+  function uid() { return ET.model && ET.model.uid ? ET.model.uid() : Math.random().toString(36).slice(2, 18); }
+  function values(o) { return Object.keys(o).map(function (k) { return o[k]; }); }
+
+  // ---- local backend ----
+  function lsLoad() {
+    try { var raw = localStorage.getItem(LS_KEY); if (raw) { var d = JSON.parse(raw); cache.nodes = d.nodes || {}; cache.entries = d.entries || {}; } } catch (e) {}
+  }
+  function lsSave() { try { localStorage.setItem(LS_KEY, JSON.stringify(cache)); } catch (e) {} }
+  var localBackend = {
+    kind: "local",
+    write: function (coll, id, data) { cache[coll][id] = Object.assign({ id: id }, data); lsSave(); emit(); return Promise.resolve(); },
+    remove: function (coll, id) { delete cache[coll][id]; lsSave(); emit(); return Promise.resolve(); },
+  };
+
+  // ---- db backend ----
+  function dbBackend(db) {
+    function retry(fn) {
+      return fn().catch(function (e) {
+        if (e && e.code === "unavailable") return new Promise(function (r) { setTimeout(r, 400 + Math.random() * 600); }).then(fn);
+        throw e;
+      });
+    }
+    ["nodes", "entries"].forEach(function (coll) {
+      db.collection(coll).onSnapshot(function (snap) {
+        var next = {};
+        snap.docs.forEach(function (d) { next[d.id] = Object.assign({}, d.data(), { id: d.id }); });
+        cache[coll] = next;
+        if (coll === "entries") ready = true;
+        emit();
+      }, function (err) { console.warn("db subscription ended", err); ET.store.lastError = err; emit(); });
+    });
+    return {
+      kind: "db",
+      write: function (coll, id, data) {
+        var body = Object.assign({}, data); delete body.id;
+        return retry(function () { return db.collection(coll).doc(id).set(body); });
+      },
+      remove: function (coll, id) { return retry(function () { return db.collection(coll).doc(id).delete(); }); },
+    };
+  }
+
+  function put(coll, obj) { return backend.write(coll, obj.id, obj).then(function () { return obj; }); }
+  function patch(coll, id, p) {
+    var cur = cache[coll][id];
+    if (!cur) return Promise.reject(new Error("Not found"));
+    var next = Object.assign({}, cur, p, { id: id });
+    cache[coll][id] = next; // optimistic
+    emit();
+    return backend.write(coll, id, next);
+  }
+
+  ET.store = {
+    kind: function () { return backend ? backend.kind : "loading"; },
+    isReady: function () { return ready; },
+    nodes: function () { return values(cache.nodes); },
+    entries: function () { return values(cache.entries); },
+    node: function (id) { return cache.nodes[id] || null; },
+    onChange: function (fn) { listeners.push(fn); },
+
+    addNode: function (o) {
+      var siblings = values(cache.nodes).filter(function (n) { return (n.parentId || null) === (o.parentId || null); });
+      var order = siblings.reduce(function (m, n) { return Math.max(m, n.order || 0); }, -1) + 1;
+      var node = { id: uid(), name: String(o.name || "").trim() || "Untitled", parentId: o.parentId || null,
+        mode: o.mode || "both", order: order, createdAt: Date.now() };
+      cache.nodes[node.id] = node; emit();
+      return put("nodes", node);
+    },
+    updateNode: function (id, p) {
+      if (p && "parentId" in p && p.parentId && ET.model.wouldCycle(ET.store.nodes(), id, p.parentId))
+        return Promise.reject(new Error("Can't move an event inside itself"));
+      return patch("nodes", id, p);
+    },
+    deleteNode: function (id) {
+      var node = cache.nodes[id]; if (!node) return Promise.resolve();
+      var kids = values(cache.nodes).filter(function (n) { return n.parentId === id; });
+      var mine = values(cache.entries).filter(function (e) { return e.nodeId === id; });
+      var chain = Promise.resolve();
+      kids.forEach(function (k) { chain = chain.then(function () { return patch("nodes", k.id, { parentId: node.parentId || null }); }); });
+      mine.forEach(function (e) { chain = chain.then(function () { delete cache.entries[e.id]; return backend.remove("entries", e.id); }); });
+      return chain.then(function () { delete cache.nodes[id]; emit(); return backend.remove("nodes", id); });
+    },
+
+    addEntry: function (o) {
+      var start = Number(o.start) || Date.now();
+      var e = { id: uid(), nodeId: o.nodeId, start: start, end: o.end === null ? null : (o.end == null ? start : Number(o.end)),
+        count: o.count == null ? 1 : Math.max(0, Number(o.count) || 0), note: o.note || "", createdAt: Date.now() };
+      cache.entries[e.id] = e; emit();
+      return put("entries", e);
+    },
+    updateEntry: function (id, p) { return patch("entries", id, p); },
+    deleteEntry: function (id) { delete cache.entries[id]; emit(); return backend.remove("entries", id); },
+
+    startTimer: function (nodeId) { return ET.store.addEntry({ nodeId: nodeId, start: Date.now(), end: null, count: 1 }); },
+    stopTimer: function (entryId) {
+      var e = cache.entries[entryId]; if (!e) return Promise.resolve();
+      return patch("entries", entryId, { end: Math.max(Date.now(), e.start) });
+    },
+    logCount: function (nodeId, n) { var t = Date.now(); return ET.store.addEntry({ nodeId: nodeId, start: t, end: t, count: n == null ? 1 : n }); },
+
+    init: function () {
+      // The viewer may attach window.claude a moment after our script runs; wait up to 2 s for it.
+      var waited = new Promise(function (resolve) {
+        var t0 = Date.now();
+        (function poll() {
+          var c = globalThis.claude;
+          if (c && c.use) return resolve(c.use("db"));
+          if (Date.now() - t0 > (location.hostname.endsWith('github.io') ? 0 : 2000)) return resolve(null);
+          setTimeout(poll, 50);
+        })();
+      });
+      return waited.catch(function () { return null; }).then(function (db) {
+        if (db) { backend = dbBackend(db); }
+        else { backend = localBackend; lsLoad(); ready = true; }
+        emit();
+        return backend.kind;
+      });
+    },
+  };
+})();
+
+</script>
+<script>
+/* track.js - the Track screen. Defines ET.views.track = { render(el, ctx) }.
+ * Plain classic script; no DOM access outside render; no timers (shell ticks [data-tick-start]). */
+(function () {
+  "use strict";
+  window.ET = window.ET || {};
+  ET.views = ET.views || {};
+
+  var PERIODS = [
+    { id: "today", label: "Today" },
+    { id: "week", label: "Week" },
+    { id: "month", label: "Month" },
+    { id: "year", label: "Year" },
+    { id: "all", label: "All" }
+  ];
+
+  var DOT = " · ";
+  var TIMES = "×";
+
+  // Action keys currently in flight. Prevents double taps while a write is pending.
+  var busy = {};
+
+  function runAction(key, btn, ctx, work) {
+    if (busy[key]) return;
+    busy[key] = true;
+    if (btn) btn.disabled = true;
+    var p;
+    try {
+      p = Promise.resolve(work());
+    } catch (err) {
+      p = Promise.reject(err);
+    }
+    p.catch(function (err) {
+      ctx.toast("Could not save: " + ((err && err.message) || err));
+    }).then(function () {
+      busy[key] = false;
+      if (btn) btn.disabled = false;
+    });
+  }
+
+  function tickSpan(start, base, now, cls) {
+    var text = ET.model.fmtDuration(base + now - start);
+    return '<span class="num' + (cls ? " " + cls : "") + '" data-tick-start="' + start +
+      '" data-tick-base="' + base + '">' + ET.esc(text) + "</span>";
+  }
+
+  // Running entries inside the subtree of `id`, plus the completed in-period ms of that subtree.
+  function subtreeRunning(model, nodes, entries, id, range) {
+    var set = {};
+    model.descendantIds(nodes, id).forEach(function (sid) { set[sid] = true; });
+    var runs = [];
+    var base = 0;
+    entries.forEach(function (e) {
+      if (!set[e.nodeId]) return;
+      if (e.end === null || e.end === undefined) {
+        runs.push(e);
+        return;
+      }
+      if (e.start >= range.from && e.start < range.to) {
+        base += Math.max(0, e.end - e.start);
+      }
+    });
+    runs.sort(function (a, b) { return a.start - b.start; });
+    return { runs: runs, base: base };
+  }
+
+  function periodSeg(state) {
+    var html = '<div class="seg" role="group" aria-label="Period">';
+    PERIODS.forEach(function (p) {
+      var on = state.period === p.id;
+      html += '<button type="button" data-act="period" data-id="' + ET.esc(p.id) + '" aria-pressed="' +
+        (on ? "true" : "false") + '">' + ET.esc(p.label) + "</button>";
+    });
+    return html + "</div>";
+  }
+
+  function runningPanel(ctx, running, nodes, now) {
+    var model = ctx.model;
+    var html = '<div class="panel stack"><div class="h2">Running now</div><div class="list">';
+    running.forEach(function (e) {
+      var label = model.pathLabel(nodes, e.nodeId) || "(deleted event)";
+      html += '<div class="list-item spread">' +
+        '<div class="grow"><div class="path">' + ET.esc(label) + "</div>" +
+        tickSpan(e.start, 0, now) + "</div>" +
+        '<button type="button" class="btn btn-run" data-act="stop" data-id="' + ET.esc(e.id) + '">Stop</button>' +
+        "</div>";
+    });
+    return html + "</div></div>";
+  }
+
+  function emptyState() {
+    return '<div class="empty stack"><p>Nothing to track yet. Add an event to start logging.</p>' +
+      '<button type="button" class="btn btn-primary" data-act="manage">Add an event</button></div>';
+  }
+
+  function treeRows(ctx, nodes, entries, agg, range, now) {
+    var model = ctx.model;
+    var state = ctx.state;
+    var expandedMap = state.expanded || {};
+    var flat = model.flatTree(nodes);
+    var html = '<div class="stack">';
+    var hideBelow = null; // depth of a collapsed ancestor whose subtree is being skipped
+
+    flat.forEach(function (item) {
+      var node = item.node;
+      var depth = item.depth;
+
+      if (hideBelow !== null) {
+        if (depth > hideBelow) return;
+        hideBelow = null;
+      }
+
+      var hasKids = model.children(nodes, node.id).length > 0;
+      var expanded = expandedMap[node.id] !== false;
+      if (hasKids && !expanded) hideBelow = depth;
+
+      var a = agg[node.id] || { ownCount: 0, ownMs: 0, totalCount: 0, totalMs: 0, runningCount: 0 };
+      var sub = a.runningCount > 0 ? subtreeRunning(model, nodes, entries, node.id, range) : null;
+      var tickable = sub && sub.runs.length === 1 && sub.runs[0].start >= range.from && sub.runs[0].start < range.to;
+
+      // Own running entry drives the row highlight and the Stop button.
+      var ownRun = null;
+      entries.forEach(function (e) {
+        if (e.nodeId !== node.id || (e.end !== null && e.end !== undefined)) return;
+        if (!ownRun || e.start < ownRun.start) ownRun = e;
+      });
+
+      // Meta: period totals (subtree totals for parents).
+      var meta = [];
+      var prefix = hasKids ? "Total " : "";
+      if (node.mode === "count" || node.mode === "both" || a.totalCount > 0) {
+        meta.push(prefix + a.totalCount + TIMES);
+      }
+      if (node.mode === "duration" || node.mode === "both" || a.totalMs > 0) {
+        if (tickable) {
+          meta.push(tickSpan(sub.runs[0].start, sub.base, now));
+        } else {
+          meta.push(ET.esc(ET.model.fmtShort(a.totalMs)));
+        }
+      }
+      if (sub && !tickable) {
+        meta.push('<span class="chip chip-run">' + sub.runs.length + " running</span>");
+      }
+
+      // Actions by mode.
+      var actions = "";
+      var id = ET.esc(node.id);
+      var countBtn = '<button type="button" class="btn btn-primary" data-act="count" data-id="' + id + '">+1</button>';
+      var durBtn;
+      if (ownRun) {
+        durBtn = '<button type="button" class="btn btn-run" data-act="stop" data-id="' + ET.esc(ownRun.id) + '">Stop ' +
+          tickSpan(ownRun.start, 0, now) + "</button>";
+      } else {
+        durBtn = '<button type="button" class="btn btn-primary" data-act="start" data-id="' + id + '">Start</button>';
+      }
+      if (node.mode === "count") actions = countBtn;
+      else if (node.mode === "duration") actions = durBtn;
+      else actions = countBtn + durBtn;
+
+      var twisty = hasKids
+        ? '<button type="button" class="twisty" data-act="toggle" data-id="' + id + '" aria-label="' +
+          (expanded ? "Collapse" : "Expand") + '">' + (expanded ? "▾" : "▸") + "</button>"
+        : "";
+
+      html += '<div class="node' + (ownRun ? " is-running" : "") + '" style="--depth:' + depth + '">' +
+        twisty +
+        '<div class="node-main grow">' +
+        '<span class="node-name" role="link" tabindex="0" data-act="open" data-id="' + id + '">' +
+        ET.esc(node.name) + "</span>" +
+        '<div class="node-meta">' + meta.join(DOT) + "</div>" +
+        "</div>" +
+        '<div class="node-actions">' + actions + "</div>" +
+        "</div>";
+    });
+
+    return html + "</div>";
+  }
+
+  ET.views.track = {
+    render: function (el, ctx) {
+      var model = ctx.model;
+      var store = ctx.store;
+      var state = ctx.state;
+      var now = ctx.now();
+      var nodes = store.nodes();
+      var entries = store.entries();
+      var range = model.periodRange(state.period, now);
+      var agg = model.aggregate(nodes, entries, { from: range.from, to: range.to, now: now });
+      var running = model.running(entries).slice().sort(function (a, b) { return a.start - b.start; });
+
+      var html = periodSeg(state);
+      if (running.length) html += runningPanel(ctx, running, nodes, now);
+      html += nodes.length
+        ? treeRows(ctx, nodes, entries, agg, range, now)
+        : emptyState();
+
+      el.innerHTML = html;
+
+      // One delegated click handler; replaced on every render so listeners never stack.
+      el.onclick = function (e) {
+        var t = e.target && e.target.closest ? e.target.closest("[data-act]") : null;
+        if (!t) return;
+        var act = t.getAttribute("data-act");
+        var id = t.getAttribute("data-id") || "";
+        var key = act + ":" + id;
+
+        if (act === "period") { ctx.setState({ period: id }); return; }
+        if (act === "toggle") {
+          var cur = ctx.state.expanded || {};
+          var exp = {};
+          Object.keys(cur).forEach(function (k) { exp[k] = cur[k]; });
+          exp[id] = !(cur[id] !== false);
+          ctx.setState({ expanded: exp });
+          return;
+        }
+        if (act === "open") { ctx.go("history", { focusNodeId: id }); return; }
+        if (act === "manage") { ctx.go("manage"); return; }
+
+        if (act === "count" || act === "start") {
+          var node = ctx.store.node(id);
+          var name = node ? node.name : "";
+          if (act === "count") {
+            runAction(key, t, ctx, function () {
+              return ctx.store.logCount(id, 1).then(function () {
+                ctx.toast("Logged 1" + DOT + name);
+              });
+            });
+          } else {
+            runAction(key, t, ctx, function () {
+              return ctx.store.startTimer(id).then(function () {
+                ctx.toast("Started" + DOT + name);
+              });
+            });
+          }
+          return;
+        }
+
+        if (act === "stop") {
+          // id is the running entry's id here.
+          var entry = ctx.store.entries().filter(function (x) { return x.id === id; })[0];
+          var ms = entry ? Math.max(0, ctx.now() - entry.start) : 0;
+          runAction(key, t, ctx, function () {
+            return ctx.store.stopTimer(id).then(function () {
+              ctx.toast("Stopped" + DOT + ET.model.fmtDuration(ms));
+            });
+          });
+        }
+      };
+    }
+  };
+})();
+
+</script>
+<script>
+/* history.js: the "History" view. Filter bar, period selector, summary,
+   add / edit / delete of past entries. Classic script, attaches to window.ET. */
+(function () {
+  var ET = (window.ET = window.ET || {});
+  ET.views = ET.views || {};
+
+  var PERIODS = [['today', 'Today'], ['week', 'Week'], ['month', 'Month'], ['year', 'Year'], ['all', 'All']];
+  var WD = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  var MO = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  var PAGE = 200;
+  var DASH = '—';   // em dash, used as the indent marker in option labels
+  var DOT = '·';    // middle dot
+  var NDASH = '–';  // en dash for time ranges
+  var TIMES = '×';  // multiplication sign for counts
+
+  // Module-level UI state. Kept out of ctx.state on purpose.
+  // draft holds form values; it survives re-renders because it lives here.
+  var H = { formOpen: false, editId: null, confirmId: null, draft: null, limit: PAGE, saving: false };
+
+  function M() { return ET.model; }
+  function esc(s) { return ET.esc(s == null ? '' : String(s)); }
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+  function hm(ms) { var d = new Date(ms); return pad(d.getHours()) + ':' + pad(d.getMinutes()); }
+  function dayKey(ms) {
+    var d = new Date(ms);
+    return d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+  }
+  function dayLabel(ms, now) {
+    var k = dayKey(ms);
+    if (k === dayKey(now)) return 'Today';
+    var y = new Date(now);
+    y.setDate(y.getDate() - 1);
+    if (k === dayKey(y.getTime())) return 'Yesterday';
+    var d = new Date(ms);
+    var label = WD[d.getDay()] + ' ' + d.getDate() + ' ' + MO[d.getMonth()];
+    if (d.getFullYear() !== new Date(now).getFullYear()) label += ' ' + d.getFullYear();
+    return label;
+  }
+
+  // <option>s for every node, indented by depth. selectedId marks one as selected.
+  // placeholder adds a "Choose an event" option with value "".
+  function eventOptions(nodes, selectedId, placeholder) {
+    var out = placeholder
+      ? '<option value=""' + (selectedId ? '' : ' selected') + '>Choose an event</option>'
+      : '';
+    M().flatTree(nodes).forEach(function (row) {
+      var indent = new Array(row.depth + 1).join(DASH + ' ');
+      out += '<option value="' + esc(row.node.id) + '"' +
+        (row.node.id === selectedId ? ' selected' : '') + '>' +
+        esc(indent + row.node.name) + '</option>';
+    });
+    return out;
+  }
+
+  function newDraft(ctx, now) {
+    return {
+      nodeId: ctx.state.focusNodeId || '',
+      start: M().toLocalInput(now - 30 * 60000),
+      end: M().toLocalInput(now),
+      count: '1',
+      note: '',
+      countOnly: false,
+      running: false,
+      error: ''
+    };
+  }
+
+  function draftFromEntry(e, now) {
+    return {
+      nodeId: e.nodeId,
+      start: M().toLocalInput(e.start),
+      end: M().toLocalInput(e.end == null ? now : e.end),
+      count: String(e.count),
+      note: e.note || '',
+      countOnly: e.end === e.start,
+      running: e.end === null,
+      error: ''
+    };
+  }
+
+  // Turns the draft into a store patch, or an error message for the user.
+  function buildPatch(d, nodes) {
+    if (!d.nodeId || !nodes.some(function (n) { return n.id === d.nodeId; })) {
+      return { error: 'Choose an event.' };
+    }
+    var start = M().fromLocalInput(d.start);
+    if (start == null) return { error: 'Enter a start time.' };
+    var countText = String(d.count == null ? '' : d.count).trim();
+    var count = Number(countText);
+    if (countText === '' || !isFinite(count) || count < 0) {
+      return { error: 'Count must be 0 or more.' };
+    }
+    var end;
+    if (d.countOnly) {
+      end = start;
+    } else if (d.running) {
+      end = null;
+    } else {
+      end = M().fromLocalInput(d.end);
+      if (end == null) return { error: 'Enter an end time, or tick Still running.' };
+      if (end < start) return { error: 'End must be the same as or after start.' };
+    }
+    return {
+      patch: { nodeId: d.nodeId, start: start, end: end, count: count, note: String(d.note || '').trim() }
+    };
+  }
+
+  // Shared add/edit form. Values come from the draft; nothing here reads the DOM.
+  function formHTML(d, nodes) {
+    var endField = '';
+    if (!d.countOnly && !d.running) {
+      endField = '<div class="field"><label for="hx-end">End</label>' +
+        '<input id="hx-end" type="datetime-local" data-d="end" value="' + esc(d.end) + '"></div>';
+    }
+    return '<div class="stack">' +
+      '<div class="field"><label for="hx-node">Event</label>' +
+        '<select id="hx-node" data-d="nodeId">' + eventOptions(nodes, d.nodeId, true) + '</select></div>' +
+      '<div class="field-row">' +
+        '<div class="field"><label for="hx-start">Start</label>' +
+          '<input id="hx-start" type="datetime-local" data-d="start" value="' + esc(d.start) + '"></div>' +
+        endField +
+      '</div>' +
+      '<div class="field-row">' +
+        '<div class="field"><label for="hx-count">Count</label>' +
+          '<input id="hx-count" type="number" min="0" step="any" data-d="count" value="' + esc(d.count) + '"></div>' +
+        '<div class="field"><label for="hx-note">Note</label>' +
+          '<input id="hx-note" type="text" data-d="note" value="' + esc(d.note) + '"></div>' +
+      '</div>' +
+      '<label class="row small"><input type="checkbox" data-d="countOnly"' +
+        (d.countOnly ? ' checked' : '') + '> Just a count (no duration)</label>' +
+      (d.countOnly ? '' :
+        '<label class="row small"><input type="checkbox" data-d="running"' +
+        (d.running ? ' checked' : '') + '> Still running</label>') +
+      '<p class="muted small" role="alert">' + esc(d.error) + '</p>' +
+      '<div class="row">' +
+        '<button type="button" class="btn btn-primary" data-act="save">Save</button>' +
+        '<button type="button" class="btn btn-ghost" data-act="cancel">Cancel</button>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function rowHTML(e, nodes, now) {
+    var id = esc(e.id);
+    if (H.confirmId === e.id) {
+      return '<div class="confirm row spread"><span>Delete this entry?</span><span class="row">' +
+        '<button type="button" class="btn btn-danger btn-sm" data-act="confirm-delete" data-id="' + id + '">Delete</button>' +
+        '<button type="button" class="btn btn-ghost btn-sm" data-act="cancel-delete">Cancel</button>' +
+        '</span></div>';
+    }
+    var countOnly = e.end === e.start;
+    var running = e.end === null;
+    var when, dur = '';
+    if (running) {
+      when = hm(e.start) + ' ' + DOT + ' running';
+      dur = '<span class="num" data-tick-start="' + e.start + '" data-tick-base="0">' +
+        M().fmtDuration(Math.max(0, now - e.start)) + '</span>';
+    } else if (countOnly) {
+      when = hm(e.start) + ' ' + DOT + ' count only';
+    } else {
+      when = hm(e.start) + NDASH + hm(e.end);
+      dur = '<span class="num">' + M().fmtDuration(M().entryDuration(e, now)) + '</span>';
+    }
+    var countChip = e.count !== 1 ? '<span class="chip">' + TIMES + esc(e.count) + '</span>' : '';
+    var label = M().pathLabel(nodes, e.nodeId) || '(deleted event)';
+    return '<div class="list-item"><div class="grow">' +
+      '<div class="path">' + esc(label) + '</div>' +
+      '<div class="row small"><span class="num">' + when + '</span>' + dur + countChip + '</div>' +
+      (e.note ? '<div class="small">' + esc(e.note) + '</div>' : '') +
+      '</div><div class="row">' +
+        '<button type="button" class="btn btn-ghost btn-sm" data-act="edit" data-id="' + id + '">Edit</button>' +
+        '<button type="button" class="btn btn-ghost btn-sm" data-act="delete" data-id="' + id + '">Delete</button>' +
+      '</div></div>';
+  }
+
+  function editRowHTML(nodes) {
+    return '<div class="list-item"><div class="grow stack">' + formHTML(H.draft, nodes) + '</div></div>';
+  }
+
+  function render(el, ctx) {
+    var now = ctx.now();
+    var state = ctx.state || {};
+    var nodes = ctx.store.nodes();
+    var period = state.period || 'today';
+    var focus = state.focusNodeId && nodes.some(function (n) { return n.id === state.focusNodeId; })
+      ? state.focusNodeId : null;
+
+    // Filter: the chosen node and all its descendants, within the period.
+    var ids = focus ? M().descendantIds(nodes, focus) : null;
+    var idSet = {};
+    if (ids) ids.forEach(function (id) { idSet[id] = true; });
+    var range = M().periodRange(period, now);
+    var list = ctx.store.entries().filter(function (e) {
+      return (!ids || idSet[e.nodeId]) && e.start >= range.from && e.start < range.to;
+    }).sort(function (a, b) {
+      return (b.start - a.start) || ((b.createdAt || 0) - (a.createdAt || 0));
+    });
+
+    var totalCount = 0, totalMs = 0;
+    list.forEach(function (e) {
+      totalCount += Number(e.count) || 0;
+      totalMs += M().entryDuration(e, now);
+    });
+
+    var filterBar =
+      '<div class="field"><label for="h-focus">Event</label>' +
+        '<select id="h-focus" data-f="focus"><option value="">All events</option>' +
+        eventOptions(nodes, focus, false) + '</select></div>' +
+      '<div class="seg" role="group" aria-label="Period">' +
+        PERIODS.map(function (p) {
+          var on = p[0] === period;
+          return '<button type="button" data-act="period" data-period="' + p[0] + '" aria-pressed="' +
+            (on ? 'true' : 'false') + '">' + p[1] + '</button>';
+        }).join('') +
+      '</div>';
+
+    var summary =
+      '<div class="row spread">' +
+        '<span class="small muted num">' + list.length + (list.length === 1 ? ' entry' : ' entries') +
+          ' ' + DOT + ' count ' + totalCount + ' ' + DOT + ' ' + esc(M().fmtShort(totalMs)) + '</span>' +
+        '<button type="button" class="btn btn-ghost btn-sm" data-act="toggle-add" aria-expanded="' +
+          (H.formOpen ? 'true' : 'false') + '">Add a past entry</button>' +
+      '</div>';
+
+    var panel = (H.formOpen && !H.editId && H.draft)
+      ? '<div class="panel">' + formHTML(H.draft, nodes) + '</div>' : '';
+
+    var body;
+    if (!list.length) {
+      body = '<div class="empty">No entries for this filter and period.</div>';
+    } else {
+      var shown = list.slice(0, H.limit);
+      var groups = [], cur = null;
+      shown.forEach(function (e) {
+        var k = dayKey(e.start);
+        if (!cur || cur.k !== k) {
+          cur = { k: k, label: dayLabel(e.start, now), rows: [] };
+          groups.push(cur);
+        }
+        var editing = H.editId === e.id && H.draft;
+        cur.rows.push(editing ? editRowHTML(nodes) : rowHTML(e, nodes, now));
+      });
+      body = groups.map(function (g) {
+        return '<section class="stack"><div class="muted small">' + esc(g.label) + '</div>' +
+          '<div class="list">' + g.rows.join('') + '</div></section>';
+      }).join('');
+      if (list.length > H.limit) {
+        body += '<div class="row"><button type="button" class="btn" data-act="more">Show more (' +
+          (list.length - H.limit) + ' more)</button></div>';
+      }
+    }
+
+    el.innerHTML = '<div class="stack">' + filterBar + summary + panel +
+      '<div class="stack">' + body + '</div></div>';
+
+    // Delegated handlers, assigned (not added) so they never stack.
+    el.onclick = function (ev) {
+      var t = ev.target && ev.target.closest ? ev.target.closest('[data-act]') : null;
+      if (!t) return;
+      var act = t.getAttribute('data-act');
+      var id = t.getAttribute('data-id');
+      if (act === 'period') {
+        H.limit = PAGE;
+        ctx.setState({ period: t.getAttribute('data-period') });
+      } else if (act === 'toggle-add') {
+        if (H.formOpen) {
+          H.formOpen = false;
+          H.draft = null;
+        } else {
+          H.formOpen = true;
+          H.editId = null;
+          H.confirmId = null;
+          H.draft = newDraft(ctx, ctx.now());
+        }
+        render(el, ctx);
+      } else if (act === 'edit') {
+        var entry = ctx.store.entries().filter(function (x) { return x.id === id; })[0];
+        if (!entry) return;
+        H.formOpen = false;
+        H.editId = id;
+        H.confirmId = null;
+        H.draft = draftFromEntry(entry, ctx.now());
+        render(el, ctx);
+      } else if (act === 'cancel') {
+        H.formOpen = false;
+        H.editId = null;
+        H.draft = null;
+        render(el, ctx);
+      } else if (act === 'save') {
+        saveForm(el, ctx);
+      } else if (act === 'delete') {
+        H.confirmId = id;
+        render(el, ctx);
+      } else if (act === 'cancel-delete') {
+        H.confirmId = null;
+        render(el, ctx);
+      } else if (act === 'confirm-delete') {
+        doDelete(el, ctx, id);
+      } else if (act === 'more') {
+        H.limit += PAGE;
+        render(el, ctx);
+      }
+    };
+
+    // Draft values are updated without re-rendering, so typing keeps focus.
+    el.oninput = function (ev) {
+      if (ev.target) onFormField(ev.target);
+    };
+
+    el.onchange = function (ev) {
+      var t = ev.target;
+      if (!t) return;
+      if (t.getAttribute('data-f') === 'focus') {
+        H.limit = PAGE;
+        ctx.setState({ focusNodeId: t.value || null });
+        return;
+      }
+      var d = onFormField(t);
+      if (d === 'countOnly' || d === 'running') {
+        // The two checkboxes exclude each other; End shows or hides, so re-render.
+        if (H.draft.countOnly) H.draft.running = false;
+        render(el, ctx);
+      }
+    };
+  }
+
+  // Copies a form field's value into the draft. Returns the field name, or null.
+  function onFormField(t) {
+    var name = t.getAttribute ? t.getAttribute('data-d') : null;
+    if (!name || !H.draft) return null;
+    H.draft[name] = t.type === 'checkbox' ? !!t.checked : t.value;
+    return name;
+  }
+
+  function saveForm(el, ctx) {
+    var d = H.draft;
+    if (!d || H.saving) return;
+    var r = buildPatch(d, ctx.store.nodes());
+    if (r.error) {
+      d.error = r.error;
+      render(el, ctx);
+      return;
+    }
+    var editing = H.editId;
+    var p;
+    H.saving = true;
+    try {
+      p = editing ? ctx.store.updateEntry(editing, r.patch) : ctx.store.addEntry(r.patch);
+    } catch (err) {
+      p = Promise.reject(err);
+    }
+    Promise.resolve(p).then(function () {
+      H.saving = false;
+      if (H.draft === d) {
+        H.formOpen = false;
+        H.editId = null;
+        H.draft = null;
+      }
+      ctx.toast(editing ? 'Saved' : 'Entry added');
+      render(el, ctx);
+    }, function (err) {
+      H.saving = false;
+      d.error = 'Could not save: ' + ((err && err.message) || err);
+      if (H.draft === d) render(el, ctx);
+    });
+  }
+
+  function doDelete(el, ctx, id) {
+    if (H.confirmId !== id) return;   // guards against a double tap
+    H.confirmId = null;
+    if (H.editId === id) { H.editId = null; H.draft = null; }
+    var p;
+    try {
+      p = ctx.store.deleteEntry(id);
+    } catch (err) {
+      p = Promise.reject(err);
+    }
+    Promise.resolve(p).then(function () {
+      ctx.toast('Deleted');
+      render(el, ctx);
+    }, function (err) {
+      ctx.toast('Could not delete: ' + ((err && err.message) || err));
+      render(el, ctx);
+    });
+  }
+
+  ET.views.history = { render: render };
+})();
+
+</script>
+<script>
+/* manage.js - the "Events" management screen. Defines ET.views.manage = { render(el, ctx) }.
+ * Follows /home/claude/tracker/CONTRACT.md. Drafts live at module level so they survive
+ * the shell's re-renders. Event handlers are assigned on `el` (no addEventListener). */
+(function () {
+  var ET = (window.ET = window.ET || {});
+  ET.views = ET.views || {};
+
+  var MODES = [["count", "Count"], ["duration", "Timer"], ["both", "Both"]];
+  var MODE_LABEL = { count: "Count", duration: "Timer", both: "Both" };
+
+  // Module-level state (survives re-renders).
+  var newDraft = { name: "", parentId: "", mode: "both" };
+  var editingId = null;
+  var editDraft = null;      // {name, mode, parentId} while editingId is set
+  var confirmingId = null;
+  var busy = {};             // action key -> true while its store promise is pending
+  var errors = { add: "", edit: "", list: "" };
+  var lastEl = null;
+  var lastCtx = null;
+
+  function esc(s) { return ET.esc(s == null ? "" : String(s)); }
+  function plural(n, one, many) { return n + " " + (n === 1 ? one : many); }
+  function off(cond) { return cond ? " disabled" : ""; }
+  function dis(key) { return off(busy[key]); }
+  function alertHtml(msg) {
+    return msg ? '<div class="confirm small" role="alert">' + esc(msg) + "</div>" : "";
+  }
+  function find(nodes, id) {
+    for (var i = 0; i < nodes.length; i++) if (nodes[i].id === id) return nodes[i];
+    return null;
+  }
+  function errMsg(err) { return (err && err.message) || "Something went wrong. Try again."; }
+  function indent(depth) {
+    var s = "";
+    for (var i = 0; i < depth; i++) s += "— ";
+    return s;
+  }
+  function paint() { if (lastEl && lastCtx) render(lastEl, lastCtx); }
+
+  function seg(kind, value) {
+    return '<div class="seg" role="group">' + MODES.map(function (m) {
+      return '<button type="button" aria-pressed="' + (m[0] === value ? "true" : "false") +
+        '" data-act="mode" data-kind="' + kind + '" data-mode="' + m[0] + '">' + m[1] + "</button>";
+    }).join("") + "</div>";
+  }
+
+  // Parent <option>s. `excluded` is a map of node ids to omit (used by Move inside).
+  function parentOptions(flat, excluded, selected) {
+    var h = '<option value="">Top level</option>';
+    flat.forEach(function (it) {
+      if (excluded && excluded[it.node.id]) return;
+      var sel = it.node.id === selected ? " selected" : "";
+      h += '<option value="' + esc(it.node.id) + '"' + sel + ">" +
+        esc(indent(it.depth) + it.node.name) + "</option>";
+    });
+    return h;
+  }
+
+  // Runs a store write once per key. Disables the control while pending; on failure
+  // shows the message under errors[errKey]. Re-renders when settled.
+  function run(key, errKey, fn) {
+    if (busy[key]) return;
+    busy[key] = true;
+    errors[errKey] = "";
+    paint();
+    var p;
+    try { p = Promise.resolve(fn()); } catch (e) { p = Promise.reject(e); }
+    p.then(function () {
+      busy[key] = false;
+      paint();
+    }, function (err) {
+      busy[key] = false;
+      errors[errKey] = errMsg(err);
+      paint();
+    });
+  }
+
+  function render(el, ctx) {
+    lastEl = el;
+    lastCtx = ctx;
+    var M = ctx.model;
+    var nodes = ctx.store.nodes();
+    var entries = ctx.store.entries();
+
+    var byId = {}, own = {}, kidCache = {};
+    nodes.forEach(function (n) { byId[n.id] = n; });
+    entries.forEach(function (e) { own[e.nodeId] = (own[e.nodeId] || 0) + 1; });
+
+    // Drop drafts that point at things that no longer exist.
+    if (newDraft.parentId && !byId[newDraft.parentId]) newDraft.parentId = "";
+    if (editingId && !byId[editingId]) { editingId = null; editDraft = null; }
+    if (confirmingId && !byId[confirmingId]) confirmingId = null;
+
+    function kids(pid) {
+      var k = pid || "";
+      if (!kidCache[k]) kidCache[k] = M.children(nodes, pid || null);
+      return kidCache[k];
+    }
+    function totalEntries(id) {
+      var c = 0;
+      M.descendantIds(nodes, id).forEach(function (x) { c += own[x] || 0; });
+      return c;
+    }
+
+    var flat = M.flatTree(nodes);
+    var h = '<div class="stack">';
+
+    if (!nodes.length) {
+      h += '<div class="panel stack"><div class="muted">Quick start</div>' +
+        '<div class="row"><button type="button" class="btn btn-sm" data-act="quick"' + dis("quick") +
+        ">Add Dog walking example</button></div></div>";
+    }
+
+    // New event form.
+    h += '<div class="panel stack"><div class="h2">New event</div>' +
+      '<div class="field"><label for="new-name">Name</label>' +
+      '<input id="new-name" type="text" data-field="new-name" autocomplete="off" placeholder="e.g. Dog walking" value="' +
+      esc(newDraft.name) + '"></div>' +
+      '<div class="field-row">' +
+      '<div class="field"><label for="new-parent">Inside</label>' +
+      '<select id="new-parent" data-field="new-parent">' + parentOptions(flat, null, newDraft.parentId) + "</select></div>" +
+      '<div class="field"><label>Type</label>' + seg("new-mode", newDraft.mode) + "</div>" +
+      "</div>" +
+      alertHtml(errors.add) +
+      '<div class="row"><button type="button" class="btn btn-primary" data-act="add"' + dis("add") +
+      ">Add event</button></div></div>";
+
+    // Event list.
+    h += '<div class="h2">Events</div>' + alertHtml(errors.list);
+    if (!flat.length) {
+      h += '<div class="empty">No events yet. Add one above.</div>';
+    } else {
+      h += '<div class="list">';
+      flat.forEach(function (it) {
+        var n = it.node;
+        var sibs = kids(n.parentId);
+        var idx = -1;
+        for (var i = 0; i < sibs.length; i++) if (sibs[i].id === n.id) idx = i;
+        var id = esc(n.id);
+
+        h += '<div class="list-item" style="--depth:' + it.depth + '"><div class="grow stack">';
+        if (editingId === n.id) {
+          h += editHtml(n, flat, nodes, M);
+        } else {
+          h += '<div class="spread"><span class="node-name">' + esc(n.name) + "</span>" +
+            '<span class="row small"><span class="chip chip-mode">' + MODE_LABEL[n.mode] + "</span>" +
+            '<span class="num muted" title="Entries in this event and its sub-events">' +
+            plural(totalEntries(n.id), "entry", "entries") + "</span></span></div>";
+          if (confirmingId === n.id) {
+            h += confirmHtml(n, byId, own, kids(n.id).length);
+          }
+        }
+        h += "</div>"; // .grow
+
+        if (editingId !== n.id && confirmingId !== n.id) {
+          h += '<div class="row">' +
+            '<button type="button" class="btn btn-icon" data-act="up" data-id="' + id +
+            '" aria-label="Move up"' + off(idx <= 0 || busy["move:" + n.id]) + ">↑</button>" +
+            '<button type="button" class="btn btn-icon" data-act="down" data-id="' + id +
+            '" aria-label="Move down"' + off(idx < 0 || idx >= sibs.length - 1 || busy["move:" + n.id]) + ">↓</button>" +
+            '<button type="button" class="btn btn-ghost" data-act="edit" data-id="' + id + '"' + dis("edit") + ">Edit</button>" +
+            '<button type="button" class="btn btn-ghost btn-danger" data-act="delete" data-id="' + id + '">Delete</button>' +
+            "</div>";
+        }
+        h += "</div>"; // .list-item
+      });
+      h += "</div>";
+    }
+    h += "</div>";
+
+    el.innerHTML = h;
+    el.onclick = onClick;
+    el.oninput = onField;
+    el.onchange = onField;
+    el.onkeydown = onKey;
+  }
+
+  function editHtml(n, flat, nodes, M) {
+    var excl = {};
+    M.descendantIds(nodes, n.id).forEach(function (x) { excl[x] = true; });
+    var id = esc(n.id);
+    return '<div class="stack">' +
+      '<div class="field"><label for="edit-name">Name</label>' +
+      '<input id="edit-name" type="text" data-field="edit-name" value="' + esc(editDraft.name) + '"></div>' +
+      '<div class="field-row">' +
+      '<div class="field"><label>Type</label>' + seg("edit-mode", editDraft.mode) + "</div>" +
+      '<div class="field"><label for="edit-parent">Move inside</label>' +
+      '<select id="edit-parent" data-field="edit-parent">' + parentOptions(flat, excl, editDraft.parentId) +
+      "</select></div>" +
+      "</div>" +
+      alertHtml(errors.edit) +
+      '<div class="row"><button type="button" class="btn btn-primary" data-act="save" data-id="' + id + '"' +
+      dis("save:" + n.id) + ">Save</button>" +
+      '<button type="button" class="btn btn-ghost" data-act="cancel-edit">Cancel</button></div>' +
+      "</div>";
+  }
+
+  function confirmHtml(n, byId, own, childCount) {
+    var parent = n.parentId ? byId[n.parentId] : null;
+    var where = parent ? esc(parent.name) : "top level";
+    var text = "Its " + plural(own[n.id] || 0, "entry", "entries") + " will be deleted.";
+    if (childCount) {
+      text += " Its " + plural(childCount, "sub-event", "sub-events") + " move up to " + where + ".";
+    }
+    return '<div class="confirm stack"><div class="small">' + text + "</div>" +
+      '<div class="row"><button type="button" class="btn btn-danger" data-act="confirm-delete" data-id="' +
+      esc(n.id) + '"' + dis("del:" + n.id) + ">Delete</button>" +
+      '<button type="button" class="btn btn-ghost" data-act="cancel-delete">Cancel</button></div></div>';
+  }
+
+  // ---- actions -------------------------------------------------------------
+
+  function addNew() {
+    var ctx = lastCtx;
+    var name = newDraft.name.trim();
+    if (!name) {
+      errors.add = "Please enter a name.";
+      paint();
+      return;
+    }
+    var parentId = newDraft.parentId || null;
+    var mode = newDraft.mode;
+    run("add", "add", function () {
+      return ctx.store.addNode({ name: name, parentId: parentId, mode: mode }).then(function () {
+        newDraft.name = "";
+        ctx.toast("Created · " + name);
+      });
+    });
+  }
+
+  function quickStart() {
+    var ctx = lastCtx;
+    run("quick", "list", function () {
+      return ctx.store.addNode({ name: "Dog walking", parentId: null, mode: "both" }).then(function (dog) {
+        return ctx.store.addNode({ name: "Ravi", parentId: dog.id, mode: "both" }).then(function () {
+          return ctx.store.addNode({ name: "Me", parentId: dog.id, mode: "both" });
+        });
+      }).then(function () {
+        ctx.toast("Added Dog walking example");
+      });
+    });
+  }
+
+  function startEdit(nodes, id) {
+    var n = find(nodes, id);
+    if (!n) return;
+    editingId = id;
+    confirmingId = null;
+    errors.edit = "";
+    editDraft = { name: n.name, mode: n.mode, parentId: n.parentId || "" };
+    paint();
+  }
+
+  function saveEdit(nodes, id) {
+    var n = find(nodes, id);
+    if (!n || !editDraft || editingId !== id) return;
+    var ctx = lastCtx, M = ctx.model;
+    var name = editDraft.name.trim();
+    if (!name) {
+      errors.edit = "Please enter a name.";
+      paint();
+      return;
+    }
+    var newParent = editDraft.parentId || null;
+    if (newParent && !find(nodes, newParent)) {
+      errors.edit = "That parent no longer exists.";
+      paint();
+      return;
+    }
+    if (M.wouldCycle(nodes, id, newParent)) {
+      errors.edit = "An event can't be moved inside itself or one of its sub-events.";
+      paint();
+      return;
+    }
+    var patch = { name: name, mode: editDraft.mode, parentId: newParent };
+    if ((n.parentId || null) !== newParent) {
+      var max = -1;
+      M.children(nodes, newParent).forEach(function (s) { if (s.order > max) max = s.order; });
+      patch.order = max + 1;
+    }
+    run("save:" + id, "edit", function () {
+      return ctx.store.updateNode(id, patch).then(function () {
+        editingId = null;
+        editDraft = null;
+        ctx.toast("Saved");
+      });
+    });
+  }
+
+  // Swap display position with the neighbour sibling (dir -1 = up, +1 = down).
+  function move(nodes, id, dir) {
+    var n = find(nodes, id);
+    if (!n) return;
+    var ctx = lastCtx;
+    var sibs = ctx.model.children(nodes, n.parentId || null).slice();
+    var i = -1;
+    for (var k = 0; k < sibs.length; k++) if (sibs[k].id === id) i = k;
+    var j = i + dir;
+    if (i < 0 || j < 0 || j >= sibs.length) return;
+
+    var dup = false;
+    for (var a = 0; a < sibs.length && !dup; a++) {
+      for (var b = a + 1; b < sibs.length; b++) {
+        if (sibs[a].order === sibs[b].order) { dup = true; break; }
+      }
+    }
+    // Effective orders: if siblings tie, renumber 0..n-1 by current display order first.
+    var ords = sibs.map(function (s, idx) { return dup ? idx : s.order; });
+
+    run("move:" + id, "list", function () {
+      var chain = Promise.resolve();
+      if (dup) {
+        sibs.forEach(function (s, idx) {
+          if (s.order !== idx) {
+            chain = chain.then(function () { return ctx.store.updateNode(s.id, { order: idx }); });
+          }
+        });
+      }
+      return chain
+        .then(function () { return ctx.store.updateNode(sibs[i].id, { order: ords[j] }); })
+        .then(function () { return ctx.store.updateNode(sibs[j].id, { order: ords[i] }); });
+    });
+  }
+
+  function doDelete(nodes, id) {
+    var n = find(nodes, id);
+    if (!n) return;
+    var ctx = lastCtx, name = n.name;
+    run("del:" + id, "list", function () {
+      return ctx.store.deleteNode(id).then(function () {
+        if (confirmingId === id) confirmingId = null;
+        if (editingId === id) { editingId = null; editDraft = null; }
+        ctx.toast("Deleted · " + name);
+      });
+    });
+  }
+
+  // ---- delegated listeners (assigned on el by render) ----------------------
+
+  function onClick(ev) {
+    var t = ev.target && ev.target.closest ? ev.target.closest("[data-act]") : null;
+    if (!t || t.disabled || !lastCtx) return;
+    var act = t.getAttribute("data-act");
+    var id = t.getAttribute("data-id");
+    var nodes = lastCtx.store.nodes();
+    switch (act) {
+      case "mode":
+        if (t.getAttribute("data-kind") === "new-mode") newDraft.mode = t.getAttribute("data-mode");
+        else if (editDraft) editDraft.mode = t.getAttribute("data-mode");
+        paint();
+        break;
+      case "add": addNew(); break;
+      case "quick": quickStart(); break;
+      case "edit": startEdit(nodes, id); break;
+      case "cancel-edit":
+        editingId = null;
+        editDraft = null;
+        errors.edit = "";
+        paint();
+        break;
+      case "save": saveEdit(nodes, id); break;
+      case "up": move(nodes, id, -1); break;
+      case "down": move(nodes, id, 1); break;
+      case "delete":
+        confirmingId = id;
+        editingId = null;
+        editDraft = null;
+        errors.edit = "";
+        paint();
+        break;
+      case "cancel-delete":
+        confirmingId = null;
+        paint();
+        break;
+      case "confirm-delete": doDelete(nodes, id); break;
+    }
+  }
+
+  // Text and select changes only update the draft; they do not re-render.
+  function onField(ev) {
+    var t = ev.target;
+    var f = t && t.getAttribute ? t.getAttribute("data-field") : null;
+    if (!f) return;
+    if (f === "new-name") newDraft.name = t.value;
+    else if (f === "new-parent") newDraft.parentId = t.value;
+    else if (f === "edit-name" && editDraft) editDraft.name = t.value;
+    else if (f === "edit-parent" && editDraft) editDraft.parentId = t.value;
+  }
+
+  function onKey(ev) {
+    if (ev.key !== "Enter" || !lastCtx || !ev.target || !ev.target.getAttribute) return;
+    var f = ev.target.getAttribute("data-field");
+    if (f === "new-name") {
+      ev.preventDefault();
+      addNew();
+    } else if (f === "edit-name" && editingId) {
+      ev.preventDefault();
+      saveEdit(lastCtx.store.nodes(), editingId);
+    }
+  }
+
+  ET.views.manage = { render: render };
+})();
+
+</script>
+<script>
+(function () {
+  var ET = window.ET; ET.views = ET.views || {};
+  ET.esc = function (s) { return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+    return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]; }); };
+
+  function load(k, d) { try { var v = localStorage.getItem("tally.ui." + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } }
+  function save(k, v) { try { localStorage.setItem("tally.ui." + k, JSON.stringify(v)); } catch (e) {} }
+
+  var view = document.getElementById("view");
+  var tab = load("tab", "track");
+  var state = { period: load("period", "today"), focusNodeId: null, expanded: load("expanded", {}) };
+  var started = false, pending = false;
+
+  var ctx = {
+    store: ET.store, model: ET.model, state: state,
+    now: function () { return Date.now(); },
+    setState: function (p) { Object.assign(state, p); save("period", state.period); save("expanded", state.expanded); render(); },
+    go: function (name, p) { tab = name; save("tab", tab); if (p) Object.assign(state, p); render(); window.scrollTo(0, 0); },
+    toast: function (msg) {
+      var t = document.getElementById("toast"); t.textContent = msg; t.classList.add("show");
+      clearTimeout(ctx._tt); ctx._tt = setTimeout(function () { t.classList.remove("show"); }, 1800);
+    },
+  };
+
+  function render() {
+    if (!started) return;
+    pending = false;
+    document.querySelectorAll("nav.tabs button").forEach(function (b) {
+      if (b.dataset.tab === tab) b.setAttribute("aria-current", "page"); else b.removeAttribute("aria-current"); });
+    var v = ET.views[tab] || ET.views.track;
+    var y = window.scrollY;
+    try { v.render(view, ctx); } catch (e) { console.error(e); view.innerHTML = '<div class="empty">Something went wrong drawing this screen. Switch tabs and back to retry.</div>'; }
+    window.scrollTo(0, y);
+    tick();
+  }
+
+  // Data changes while someone is typing would wipe the field under their fingers: wait for blur.
+  function typing() { var a = document.activeElement; return a && view.contains(a) && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName); }
+  view.addEventListener("focusout", function () { setTimeout(function () { if (pending && !typing()) render(); }, 0); });
+
+  ET.store.onChange(function () {
+    var k = ET.store.kind();
+    document.getElementById("sync").textContent = k === "db" ? "Synced" : k === "local" ? "This device only" : "Loading";
+    if (!started && ET.store.isReady()) { started = true; render(); return; }
+    if (typing()) { pending = true; return; }
+    render();
+  });
+
+  document.querySelector("nav.tabs").onclick = function (e) {
+    var b = e.target.closest("[data-tab]"); if (b) ctx.go(b.dataset.tab);
+  };
+  view.addEventListener("keydown", function (e) {
+    if ((e.key === "Enter" || e.key === " ") && e.target.matches('[role="link"]')) { e.preventDefault(); e.target.click(); }
+  });
+
+  function tick() {
+    var now = Date.now();
+    view.querySelectorAll("[data-tick-start]").forEach(function (n) {
+      var s = Number(n.getAttribute("data-tick-start")), b = Number(n.getAttribute("data-tick-base")) || 0;
+      if (s) n.textContent = ET.model.fmtDuration(b + now - s);
+    });
+  }
+  setInterval(tick, 1000);
+  document.addEventListener("visibilitychange", function () { if (!document.hidden) render(); });
+
+  ET.store.init();
+})();
+</script>
+
+</body></html>

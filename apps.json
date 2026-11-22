@@ -104,5 +104,56 @@
    "Use Hint to lock one correct mirror if you're stuck.",
    "Solve the board to unlock the next, larger level."
   ]
+ },
+ {
+  "slug": "evolution-sim",
+  "name": "Evolution Sim",
+  "tagline": "Watch species evolve: an artificial-life simulator with genomes, predators, mating, mutation and speciation",
+  "meta_description": "Free evolution simulator in your browser. Organisms with genomes eat, hunt, mate and mutate, and new species emerge. Live family tree, charts and CSV export.",
+  "category": "Simulation",
+  "keywords": [
+   "evolution simulator",
+   "artificial life",
+   "natural selection simulation",
+   "speciation",
+   "predator prey simulation",
+   "genetic algorithm",
+   "ecosystem simulator"
+  ],
+  "date": "2026-11-18",
+  "accent": "#6fc591",
+  "description": "Evolution Sim is an artificial-life sandbox where natural selection plays out in front of you. Each organism carries a genome that sets its body size, speed, senses, lifespan and diet. They graze on plants, hunt each other, mate with genetically similar partners and pass on mutated copies of their genes. Nothing about species is scripted: the simulator finds species by clustering genomes, and colours them as they appear.\n\nOver a few minutes you'll see niches form. Plant eaters and meat eaters drift apart, body sizes split, hunters rise and crash with their prey, and lineages branch off and go extinct. A live family tree shows every species over time, a diet-versus-size chart shows the separate niches, and population charts track organisms, hunters and plant biomass. Lifetime stats cover births, deaths by cause, generations and hunting success.\n\nYou control the world: its size (up to 3,600 organisms), sim speed or max speed, mutation rate, plant growth, mating range, seasons, and two energy-cost formulas, including a realistic Kleiber-law option. An optional genome layer adds chromosome linkage, regulatory genes and gene duplication. Use a seed to repeat a run exactly, and copy the log as CSV to analyse it yourself.",
+  "how_to": [
+   "Let the simulation run and watch colours (species) appear.",
+   "Use the family tree and diet-vs-size charts to see species split into niches.",
+   "Change mutation, plant growth or mating range, then press Reset to compare.",
+   "Switch on seasons or the genome layer for more complex runs.",
+   "Set a seed to repeat a run, and use Copy log as CSV to export data."
+  ]
+ },
+ {
+  "slug": "tally",
+  "name": "Tally",
+  "tagline": "Track anything with counters and timers, nested in groups with roll-up totals and editable history",
+  "meta_description": "Free habit and time tracker in your browser. Count events or time sessions, nest them in groups with roll-up totals, and browse or edit your history. No sign-up.",
+  "category": "Productivity",
+  "keywords": [
+   "habit tracker",
+   "event counter",
+   "time tracker",
+   "activity log",
+   "tally counter app",
+   "hierarchical tracker",
+   "daily tracker"
+  ],
+  "date": "2026-10-16",
+  "accent": "#d4561c",
+  "description": "Tally is a simple, flexible tracker for anything you want to count or time: dog walks, cups of coffee, practice sessions, meetings, workouts or chores. Each event can be a counter (tap to log one), a timer (start and stop a session) or both.\n\nThe twist is that events can be nested. Put \"Dog walk\" under \"Pets\", or give each family member their own sub-event, and Tally rolls the totals up the tree, so you see both the detail and the big picture. You can move events to a new parent at any time, and running timers are highlighted so you never forget one.\n\nThe History tab shows totals for today, this week, this month or any period, broken down by event. You can edit or delete any entry if you logged something by mistake. Everything is saved privately on your own device. There's no account and no server, and nothing is sent anywhere.",
+  "how_to": [
+   "Open Events and add something to track, choosing counter, timer or both.",
+   "Nest events under a parent to get roll-up totals.",
+   "On Track, tap +1 to count or Start/Stop to time a session.",
+   "Open History to see totals by period and edit any entry."
+  ]
  }
 ]
