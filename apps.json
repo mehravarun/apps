@@ -26,5 +26,58 @@
    "Tap any result tile to copy its value.",
    "Open the '?' notes under each panel for the formulas behind the numbers."
   ]
+ },
+ {
+  "slug": "gyre",
+  "name": "Gyre",
+  "tagline": "Euclidean rhythm machine: four rings of synthesized drums that spread beats evenly and drift into polyrhythms",
+  "meta_description": "Free online Euclidean rhythm generator and drum machine. Build polyrhythms with four rotating rings, tresillo and bembé presets, swing and tempo control.",
+  "category": "Music",
+  "keywords": [
+   "Euclidean rhythm generator",
+   "online drum machine",
+   "polyrhythm",
+   "polymeter",
+   "tresillo",
+   "bembe",
+   "rhythm sequencer",
+   "beat maker"
+  ],
+  "date": "2026-11-20",
+  "accent": "#ff7a59",
+  "description": "Gyre is a playable Euclidean rhythm machine that runs in your browser. Four concentric rings (hi-hat, chime, snare and kick) each spread a chosen number of hits across a chosen number of steps as evenly as possible. This is the Euclidean algorithm, and it turns out to produce many of the world's traditional rhythms.\n\nSet a ring to 3 hits over 8 steps and you get the Cuban tresillo. 5 over 8 gives the cinquillo, and 7 over 12 gives the West African bembé bell pattern. Give the rings different step counts and they loop at different lengths, so the groove keeps shifting against itself until the cycles line up again. Gyre shows that cycle length in the middle of the dial.\n\nEvery sound is synthesized live with the Web Audio API, so there are no samples to download. Rotate any ring to shift its pattern, tap individual dots to break the rule, add swing, and save your groove automatically on your device. It's a quick way to explore rhythm theory, find ideas for a beat, or just watch the patterns orbit.",
+  "how_to": [
+   "Press Play (or the space bar) to start the beat.",
+   "Pick a preset such as Tresillo, Bembé or Odd 7·9·11, or press Shuffle.",
+   "Use each ring's Steps, Hits and Rotate sliders to change its pattern.",
+   "Tap any dot on the dial to flip that single step on or off.",
+   "Adjust Tempo and Swing, and mute rings to hear the layers."
+  ]
+ },
+ {
+  "slug": "mycel",
+  "name": "Mycel",
+  "tagline": "Rotate-the-tiles connection puzzle: turn fungus strands until every mushroom links to the glowing spore",
+  "meta_description": "Free daily pipe-rotation puzzle game in your browser. Turn the tiles to connect every mushroom to the spore. 5×5, 7×7 and 9×9 boards, daily and random modes.",
+  "category": "Games",
+  "keywords": [
+   "pipe puzzle",
+   "rotate tiles puzzle",
+   "daily puzzle game",
+   "net puzzle",
+   "connect the pipes",
+   "browser puzzle game",
+   "logic puzzle"
+  ],
+  "date": "2026-11-21",
+  "accent": "#ffb547",
+  "description": "Mycel is a calm, glowing take on the classic rotate-the-pipes connection puzzle. The board is a patch of forest floor crossed by strands of fungus. A spore sits in the middle, and mushrooms are scattered at the ends of the strands. Every tile has been turned at random, and your job is to rotate them back until every mushroom draws food from the spore.\n\nTap a tile to turn it a quarter clockwise. Strands that connect back to the spore light up amber, so you can watch the network grow as you solve it. Long-press (or right-click) a tile you're sure of to pin it so you can't turn it by accident. When the last mushroom is fed, a wave of light ripples outward across the board.\n\nChoose a 5×5 Patch, 7×7 Grove or 9×9 Forest. Daily mode gives everyone the same board each day, and Wild mode makes a fresh random board whenever you like. Your best time and move count for each size are saved on your device. There's no sign-up and no ads, and it works on phones and desktops.",
+  "how_to": [
+   "Tap a tile to rotate it clockwise.",
+   "Connect strands back to the glowing spore in the middle. Connected strands light up.",
+   "Long-press or right-click a tile to pin it in place.",
+   "Feed every mushroom to finish the board.",
+   "Switch size, or press New for a random Wild board."
+  ]
  }
 ]

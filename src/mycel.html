@@ -1,0 +1,242 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Mycel — Grow the Network</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: one-screen game — masthead, HUD strip, square board on loam, control tray */
+:root{
+  --loam:#1b1424; --loam-2:#251b31; --tile:#2c2139; --tile-lock:#3a2a3f;
+  --hypha:#6d5878; --glow:#ffb547; --glow-2:#ffe2a3; --spore:#ff7a59;
+  --ink:#f2e6d8; --ink-dim:#a893ad; --line:#3d2f4a;
+  --f-display:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+  --f-body:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  color-scheme:dark;
+}
+html,body{height:100%}
+body{background:var(--loam);color:var(--ink);font-family:var(--f-body);
+  background-image:radial-gradient(120% 70% at 50% 0%,#2e1f3a 0%,var(--loam) 60%);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
+  overflow-x:hidden;-webkit-tap-highlight-color:transparent}
+.app{max-width:640px;margin:0 auto;padding-block:14px 18px;display:flex;flex-direction:column;gap:12px;min-height:100%;box-sizing:border-box}
+header{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+h1{font-family:var(--f-display);font-weight:400;font-style:italic;font-size:clamp(2rem,7vw,2.8rem);margin:0;letter-spacing:.01em;line-height:1;
+  color:var(--glow-2);text-shadow:0 0 18px rgba(255,181,71,.35)}
+h1 span{font-style:normal;font-size:.42em;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-dim);margin-left:.6em;vertical-align:middle}
+.tag{font-size:.82rem;color:var(--ink-dim);max-width:34ch;line-height:1.4}
+.hud{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.hud div{background:var(--loam-2);padding:8px 10px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.hud b{font-family:var(--f-mono);font-variant-numeric:tabular-nums;font-weight:500;font-size:1.05rem;color:var(--ink)}
+.hud small{font-size:.62rem;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-dim)}
+.hud .meter{height:3px;background:var(--tile);border-radius:2px;margin-top:3px;overflow:hidden}
+.hud .meter i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--spore),var(--glow));transition:width .25s}
+.board{position:relative;align-self:center;width:100%;display:flex;justify-content:center}
+canvas{display:block;touch-action:manipulation;border-radius:14px;box-shadow:0 0 0 1px var(--line),0 20px 60px rgba(0,0,0,.45);cursor:pointer;max-width:100%}
+.tray{display:flex;flex-wrap:wrap;gap:8px;justify-content:space-between;align-items:center}
+.seg{display:flex;background:var(--loam-2);border:1px solid var(--line);border-radius:999px;padding:3px;gap:2px}
+.seg button,.btn{font:inherit;font-size:.85rem;color:var(--ink-dim);background:none;border:0;border-radius:999px;padding:8px 13px;cursor:pointer;min-height:36px}
+.seg button[aria-pressed="true"]{background:var(--tile-lock);color:var(--glow-2)}
+.btn{border:1px solid var(--line);background:var(--loam-2);color:var(--ink)}
+.btn.primary{background:var(--glow);color:#2a1a10;border-color:var(--glow);font-weight:600}
+button:focus-visible{outline:2px solid var(--glow);outline-offset:2px}
+.actions{display:flex;gap:8px}
+.help{font-size:.8rem;color:var(--ink-dim);line-height:1.5;margin:0}
+.help kbd{font-family:var(--f-mono);font-size:.75rem;border:1px solid var(--line);border-radius:4px;padding:0 4px;color:var(--ink)}
+.bloom{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.card{pointer-events:auto;background:rgba(27,20,36,.92);border:1px solid var(--glow);border-radius:16px;padding:20px 24px;text-align:center;
+  box-shadow:0 0 40px rgba(255,181,71,.25);display:flex;flex-direction:column;gap:10px;align-items:center;max-width:80%;
+  animation:rise .5s ease-out}
+.card h2{font-family:var(--f-display);font-style:italic;font-weight:400;font-size:1.9rem;margin:0;color:var(--glow-2)}
+.card p{margin:0;color:var(--ink-dim);font-size:.9rem}
+.card p b{color:var(--ink);font-family:var(--f-mono);font-weight:500}
+@keyframes rise{from{opacity:0;transform:translateY(10px) scale(.97)}to{opacity:1;transform:none}}
+@media (max-width:420px){.hud b{font-size:.95rem}.seg button{padding:8px 10px}}
+@media (prefers-reduced-motion:reduce){.card{animation:none}}
+</style>
+
+<div class="app">
+  <header>
+    <h1>Mycel<span>grow the network</span></h1>
+    <div class="tag">Turn each strand of fungus until every mushroom draws food from the glowing spore.</div>
+  </header>
+
+  <div class="hud" aria-live="polite">
+    <div><small>Moves</small><b id="moves">0</b></div>
+    <div><small>Time</small><b id="time">0:00</b></div>
+    <div><small>Fed</small><b id="fed">0%</b><span class="meter"><i id="meter"></i></span></div>
+    <div><small>Best</small><b id="best">—</b></div>
+  </div>
+
+  <div class="board" id="board">
+    <canvas id="cv" aria-label="Puzzle board. Tap a tile to rotate it."></canvas>
+    <div class="bloom" id="bloom" hidden>
+      <div class="card">
+        <h2>Fully fruited</h2>
+        <p id="winText"></p>
+        <button class="btn primary" id="nextBtn">Grow another</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="tray">
+    <div class="seg" role="group" aria-label="Board size">
+      <button id="s5" data-n="5">Patch 5</button>
+      <button id="s7" data-n="7">Grove 7</button>
+      <button id="s9" data-n="9">Forest 9</button>
+    </div>
+    <div class="seg" role="group" aria-label="Puzzle source">
+      <button id="mDaily" data-m="daily">Daily</button>
+      <button id="mWild" data-m="wild">Wild</button>
+    </div>
+    <div class="actions">
+      <button class="btn" id="resetBtn">Reset</button>
+      <button class="btn primary" id="newBtn">New</button>
+    </div>
+  </div>
+  <p class="help">Tap a tile to turn it clockwise. Long-press or right-click to pin a tile you're sure of. Pinned tiles won't turn. Daily boards are the same for everyone each day.</p>
+</div>
+
+<script>
+(()=>{
+const cv=document.getElementById('cv'),ctx=cv.getContext('2d');
+const $=id=>document.getElementById(id);
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const DIRS=[[0,-1,1],[1,0,2],[0,1,4],[-1,0,8]];
+const opp=b=>b<4?b<<2:b>>2;
+const rot=(m,k)=>{k=((k%4)+4)%4;for(let i=0;i<k;i++)m=((m<<1)|(m>>3))&15;return m};
+function rng32(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const store={get(k){try{return JSON.parse(localStorage.getItem(k))}catch(e){return null}},set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+
+function generate(n,rnd){
+  const N=n*n,base=new Array(N).fill(0),vis=new Array(N).fill(false);
+  const src=Math.floor(n/2)*n+Math.floor(n/2);
+  vis[src]=true;const fr=[];
+  const push=i=>{const x=i%n,y=(i/n)|0;for(const[dx,dy,b]of DIRS){const nx=x+dx,ny=y+dy;if(nx>=0&&ny>=0&&nx<n&&ny<n&&!vis[ny*n+nx])fr.push([i,ny*n+nx,b])}};
+  push(src);
+  while(fr.length){
+    const k=(rnd()*fr.length)|0;const e=fr[k];fr[k]=fr[fr.length-1];fr.pop();
+    const[a,b,bit]=e;if(vis[b])continue;
+    // discourage 4-way crossings
+    if(base[a]===7||base[a]===11||base[a]===13||base[a]===14){if(rnd()<.7&&fr.some(f=>f[1]===b&&f[0]!==a))continue}
+    base[a]|=bit;base[b]|=opp(bit);vis[b]=true;push(b);
+  }
+  return{base,src};
+}
+function powered(n,base,r,src){
+  const N=n*n,on=new Array(N).fill(false),q=[src];on[src]=true;let c=1;
+  while(q.length){const i=q.pop(),x=i%n,y=(i/n)|0,m=rot(base[i],r[i]);
+    for(const[dx,dy,b]of DIRS){if(!(m&b))continue;const nx=x+dx,ny=y+dy;if(nx<0||ny<0||nx>=n||ny>=n)continue;const j=ny*n+nx;
+      if(on[j])continue;if(rot(base[j],r[j])&opp(b)){on[j]=true;c++;q.push(j)}}}
+  return{on,c};
+}
+
+let S={};let n=store.get('mycel-n')||7,mode=store.get('mycel-mode')||'daily';
+function seedFor(){const d=new Date();return mode==='daily'?(d.getFullYear()*10000+(d.getMonth()+1)*100+d.getDate())*10+n:(Math.random()*2**31)|0}
+function newGame(keepSeed){
+  const seed=keepSeed?S.seed:seedFor();const rnd=rng32(seed);
+  const{base,src}=generate(n,rnd);
+  let r;do{r=base.map(()=>(rnd()*4)|0)}while(powered(n,base,r,src).c===n*n);
+  S={seed,n,base,src,r,r0:r.slice(),ang:r.map(v=>v*90),lock:new Array(n*n).fill(false),moves:0,t0:0,tEnd:0,won:false,winAt:0};
+  S.wob=base.map((_,i)=>{const g=rng32(seed*31+i);return[0,0,0,0].map(()=>(g()-.5)*.35)});
+  $('bloom').hidden=true;update();resize();
+}
+function reset(){S.r=S.r0.slice();S.ang=S.r.map(v=>v*90);S.lock.fill(false);S.moves=0;S.t0=0;S.tEnd=0;S.won=false;$('bloom').hidden=true;update()}
+
+function fmt(ms){const s=Math.floor(ms/1000);return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')}
+function bestKey(){return'mycel-best-'+n}
+function update(){
+  const p=powered(S.n,S.base,S.r,S.src);S.on=p.on;
+  const pct=Math.round(p.c/(S.n*S.n)*100);
+  $('moves').textContent=S.moves;$('fed').textContent=pct+'%';$('meter').style.width=pct+'%';
+  const b=store.get(bestKey());$('best').textContent=b?fmt(b.time)+' · '+b.moves:'—';
+  if(p.c===S.n*S.n&&!S.won){S.won=true;S.tEnd=performance.now();S.winAt=S.tEnd;
+    const t=S.t0?S.tEnd-S.t0:0;let rec='';
+    if(!b||t<b.time||(t===b.time&&S.moves<b.moves)){store.set(bestKey(),{time:t,moves:S.moves});rec=' New best for this size.'}
+    $('winText').innerHTML=`Every mushroom is fed in <b>${S.moves}</b> turns and <b>${fmt(t)}</b>.${rec}`;
+    setTimeout(()=>{if(S.won)$('bloom').hidden=false},reduce?0:900);
+    update();
+  }
+  document.querySelectorAll('[data-n]').forEach(e=>e.setAttribute('aria-pressed',+e.dataset.n===n));
+  document.querySelectorAll('[data-m]').forEach(e=>e.setAttribute('aria-pressed',e.dataset.m===mode));
+}
+
+let size=400,cell=80,dpr=1;
+function resize(){
+  const w=$('board').clientWidth;const h=window.innerHeight-260;
+  size=Math.max(240,Math.min(w,Math.max(h,300),640));
+  dpr=Math.min(window.devicePixelRatio||1,2.5);
+  cv.style.width=size+'px';cv.style.height=size+'px';cv.width=Math.round(size*dpr);cv.height=Math.round(size*dpr);
+  cell=size/S.n;
+}
+addEventListener('resize',resize);
+
+function drawStrand(m,c,w,col,wob){
+  for(let k=0;k<4;k++){const b=1<<k;if(!(m&b))continue;
+    const[dx,dy]=DIRS[k];const ex=dx*c/2,ey=dy*c/2;const px=-dy*wob[k]*c,py=dx*wob[k]*c;
+    ctx.beginPath();ctx.moveTo(0,0);ctx.quadraticCurveTo(ex*.5+px,ey*.5+py,ex,ey);
+    ctx.strokeStyle=col;ctx.lineWidth=w;ctx.stroke()}
+}
+function frame(now){
+  const n=S.n,c=cell;
+  ctx.setTransform(dpr,0,0,dpr,0,0);ctx.fillStyle='#160f1e';ctx.fillRect(0,0,size,size);
+  ctx.lineCap='round';
+  const since=S.won?(now-S.winAt):-1;
+  for(let i=0;i<n*n;i++){
+    const x=i%n,y=(i/n)|0,cx=x*c+c/2,cy=y*c+c/2;
+    // animate angle
+    const target=S.r[i]*90;if(reduce)S.ang[i]=target;else S.ang[i]+=(target-S.ang[i])*.28;if(Math.abs(target-S.ang[i])<.3)S.ang[i]=target;
+    ctx.fillStyle=S.lock[i]?'#3a2a3f':'#241a2f';const g=c*.04;
+    ctx.beginPath();ctx.roundRect?ctx.roundRect(x*c+g,y*c+g,c-2*g,c-2*g,c*.14):ctx.rect(x*c+g,y*c+g,c-2*g,c-2*g);ctx.fill();
+    if(S.lock[i]){ctx.strokeStyle='rgba(255,181,71,.25)';ctx.lineWidth=1;ctx.stroke()}
+    ctx.save();ctx.translate(cx,cy);ctx.rotate(S.ang[i]*Math.PI/180);
+    const m=S.base[i],on=S.on[i],wob=S.wob[i];
+    const wave=since>=0?Math.max(0,1-Math.abs((since/700)-(Math.hypot(x-n/2+.5,y-n/2+.5)/n*2))):0;
+    if(on){
+      ctx.globalAlpha=.22+wave*.4;drawStrand(m,c,c*.42,'#ffb547',wob);ctx.globalAlpha=1;
+      drawStrand(m,c,c*.17,'#ffb547',wob);
+      if(!reduce){ctx.setLineDash([c*.06,c*.22]);ctx.lineDashOffset=-now/40;drawStrand(m,c,c*.06,'#fff1cc',wob);ctx.setLineDash([])}
+    }else{drawStrand(m,c,c*.15,'#6d5878',wob)}
+    ctx.restore();
+    const deg=[1,2,4,8].filter(b=>m&b).length;
+    if(i===S.src){
+      const p=reduce?0:(now/1600)%1;
+      ctx.strokeStyle=`rgba(255,122,89,${.6*(1-p)})`;ctx.lineWidth=2;ctx.beginPath();ctx.arc(cx,cy,c*(.2+.25*p),0,7);ctx.stroke();
+      const gr=ctx.createRadialGradient(cx,cy,0,cx,cy,c*.24);gr.addColorStop(0,'#fff1cc');gr.addColorStop(.5,'#ff7a59');gr.addColorStop(1,'rgba(255,122,89,0)');
+      ctx.fillStyle=gr;ctx.beginPath();ctx.arc(cx,cy,c*.24,0,7);ctx.fill();
+    }else if(deg===1){ // mushroom
+      const s=c*(.17+wave*.05);
+      ctx.fillStyle=on?'#ffe2a3':'#4c3c57';
+      ctx.fillRect(cx-s*.22,cy-s*.1,s*.44,s*.75);
+      ctx.beginPath();ctx.ellipse(cx,cy-s*.1,s,s*.68,0,Math.PI,0);ctx.closePath();
+      ctx.fillStyle=on?'#ff9a4a':'#5b4868';ctx.fill();
+      ctx.fillStyle=on?'#fff1cc':'#7a6585';
+      for(const[ox,oy,r]of[[-.45,-.42,.12],[.15,-.55,.1],[.5,-.3,.09]]){ctx.beginPath();ctx.arc(cx+ox*s,cy+oy*s,r*s,0,7);ctx.fill()}
+      if(on){ctx.globalAlpha=.25;ctx.fillStyle='#ffb547';ctx.beginPath();ctx.arc(cx,cy-s*.2,s*1.5,0,7);ctx.fill();ctx.globalAlpha=1}
+    }else if(on){ctx.fillStyle='#ffe2a3';ctx.beginPath();ctx.arc(cx,cy,c*.07,0,7);ctx.fill()}
+  }
+  const t=S.t0?((S.won?S.tEnd:now)-S.t0):0;$('time').textContent=fmt(t);
+  requestAnimationFrame(frame);
+}
+
+// input
+let press=null;
+function cellAt(e){const r=cv.getBoundingClientRect();const x=Math.floor((e.clientX-r.left)/r.width*S.n),y=Math.floor((e.clientY-r.top)/r.height*S.n);
+  return x>=0&&y>=0&&x<S.n&&y<S.n?y*S.n+x:-1}
+function toggleLock(i){if(i<0||S.won)return;S.lock[i]=!S.lock[i]}
+cv.addEventListener('pointerdown',e=>{if(e.button===2)return;const i=cellAt(e);press={i,long:false,t:setTimeout(()=>{press&&(press.long=true);toggleLock(i);navigator.vibrate&&navigator.vibrate(15)},450)}});
+cv.addEventListener('pointerup',e=>{if(!press)return;clearTimeout(press.t);const i=cellAt(e);
+  if(!press.long&&i===press.i&&i>=0&&!S.won&&!S.lock[i]){S.r[i]=S.r[i]+1;if(!S.t0)S.t0=performance.now();S.moves++;update()}press=null});
+cv.addEventListener('pointerleave',()=>{if(press){clearTimeout(press.t);press=null}});
+cv.addEventListener('pointercancel',()=>{if(press){clearTimeout(press.t);press=null}});
+cv.addEventListener('contextmenu',e=>{e.preventDefault();toggleLock(cellAt(e))});
+
+document.querySelectorAll('[data-n]').forEach(b=>b.addEventListener('click',()=>{n=+b.dataset.n;store.set('mycel-n',n);newGame()}));
+document.querySelectorAll('[data-m]').forEach(b=>b.addEventListener('click',()=>{mode=b.dataset.m;store.set('mycel-mode',mode);newGame()}));
+$('newBtn').addEventListener('click',()=>{if(mode==='daily'){mode='wild';store.set('mycel-mode',mode)}newGame()});
+$('nextBtn').addEventListener('click',()=>{if(mode==='daily'){mode='wild';store.set('mycel-mode',mode)}newGame()});
+$('resetBtn').addEventListener('click',reset);
+
+newGame();requestAnimationFrame(frame);
+})();
+</script>
+
+</body></html>
