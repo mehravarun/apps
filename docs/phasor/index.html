@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>PHASOR — RF calculator kit: dBm converter, VSWR and return loss, interactive Smith chart, noise figure cascade and link budget</title>
+<meta name="description" content="Free RF calculator: dBm/watts/volts converter, VSWR and return loss, interactive Smith chart with L-match solver, Friis noise cascade and link budget.">
+<link rel="canonical" href="https://mehravarun.github.io/apps/phasor/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Daily Apps">
+<meta property="og:title" content="PHASOR — RF calculator kit: dBm converter, VSWR and return loss, interactive Smith chart, noise figure cascade and link budget">
+<meta property="og:description" content="Free RF calculator: dBm/watts/volts converter, VSWR and return loss, interactive Smith chart with L-match solver, Friis noise cascade and link budget.">
+<meta property="og:url" content="https://mehravarun.github.io/apps/phasor/">
+<meta property="og:image" content="https://mehravarun.github.io/apps/phasor/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#0b0d10">
+<link rel="alternate" type="application/rss+xml" title="Daily Apps" href="https://mehravarun.github.io/apps/feed.xml">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230b0d10'/%3E%3Ccircle cx='16' cy='16' r='7' fill='none' stroke='%233cf0a8' stroke-width='3'/%3E%3C/svg%3E">
+<style>
+:root{--bg:#0b0d10;--panel:#13161b;--line:#232832;--ink:#e8ecf1;--dim:#9aa3b0;--faint:#5d6672;
+--sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--mono:ui-monospace,Menlo,Consolas,monospace}
+*{box-sizing:border-box;margin:0;padding:0}
+html{background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased}
+body{min-height:100vh;line-height:1.6}
+a{color:inherit}
+.wrap{max-width:1100px;margin:0 auto;padding:0 max(18px,env(safe-area-inset-left)) 0 max(18px,env(safe-area-inset-right))}
+.top{display:flex;align-items:center;justify-content:space-between;padding:18px 0;border-bottom:1px solid var(--line)}
+.logo{font:700 15px var(--mono);letter-spacing:.18em;text-decoration:none;text-transform:uppercase}
+.logo span{color:var(--acc,#3cf0a8)}
+.top nav a{color:var(--dim);text-decoration:none;font-size:14px;margin-left:18px}
+.top nav a:hover{color:var(--ink)}
+h1{font-size:clamp(30px,6vw,52px);line-height:1.08;letter-spacing:-.02em;margin:40px 0 12px}
+h2{font-size:22px;margin:42px 0 12px;letter-spacing:-.01em}
+.lede{font-size:clamp(16px,2.4vw,19px);color:var(--dim);max-width:720px}
+.meta{font:13px var(--mono);color:var(--faint);margin-top:14px;display:flex;gap:14px;flex-wrap:wrap}
+.chip{display:inline-block;font:600 12px var(--mono);letter-spacing:.06em;text-transform:uppercase;padding:4px 10px;border-radius:99px;border:1px solid var(--line);color:var(--dim);background:var(--panel);cursor:pointer}
+.chip.on{color:#06110c;background:var(--acc,#3cf0a8);border-color:transparent}
+.btns{display:flex;gap:10px;flex-wrap:wrap;margin:26px 0 18px}
+.btn{display:inline-flex;align-items:center;gap:8px;padding:12px 20px;border-radius:12px;font-weight:600;text-decoration:none;border:1px solid var(--line);background:var(--panel)}
+.btn.main{background:var(--acc,#3cf0a8);color:#06110c;border-color:transparent}
+.btn:hover{filter:brightness(1.1)}
+.frame{border:1px solid var(--line);border-radius:16px;overflow:hidden;background:#000;height:min(78vh,820px);box-shadow:0 20px 60px rgba(0,0,0,.45)}
+.frame iframe{width:100%;height:100%;border:0;display:block}
+.prose{max-width:720px;color:#cfd5dd}
+.prose p{margin:0 0 14px}
+.prose ol{padding-left:22px}.prose li{margin:6px 0}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;margin:22px 0 10px}
+.card{position:relative;display:block;padding:20px;border-radius:16px;border:1px solid var(--line);background:var(--panel);text-decoration:none;transition:.2s;overflow:hidden}
+.card::before{content:"";position:absolute;inset:0 0 auto;height:3px;background:var(--c)}
+.card:hover{transform:translateY(-2px);border-color:var(--c)}
+.card h3{font-size:19px;margin:8px 0 6px}
+.card p{font-size:14px;color:var(--dim)}
+.card .k{font:600 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--c)}
+.card .d{font:12px var(--mono);color:var(--faint);margin-top:12px}
+.filters{display:flex;gap:8px;flex-wrap:wrap;margin-top:28px}
+footer{margin:70px 0 0;padding:26px 0 max(30px,env(safe-area-inset-bottom));border-top:1px solid var(--line);color:var(--faint);font-size:13px}
+.empty{color:var(--dim);margin:40px 0}
+</style>
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "WebApplication", "name": "PHASOR", "description": "Free RF calculator: dBm/watts/volts converter, VSWR and return loss, interactive Smith chart with L-match solver, Friis noise cascade and link budget.", "url": "https://mehravarun.github.io/apps/phasor/", "applicationCategory": "Engineering", "operatingSystem": "Any (web browser)", "browserRequirements": "Requires JavaScript", "datePublished": "2026-11-20", "keywords": "dBm to watts, VSWR calculator, return loss, Smith chart, L network matching, noise figure cascade, Friis, link budget, free space path loss", "isAccessibleForFree": true, "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}, "author": {"@type": "Person", "name": "Varun"}}</script>
+</head>
+<body style="--acc:#3cf0a8">
+<div class="wrap">
+<header class="top"><a class="logo" href="https://mehravarun.github.io/apps/">Daily Apps<span>.</span></a><nav><a href="https://mehravarun.github.io/apps/">All apps</a><a href="https://mehravarun.github.io/apps/feed.xml">RSS</a></nav></header>
+
+<main>
+<h1>PHASOR</h1>
+<p class="lede">RF calculator kit: dBm converter, VSWR and return loss, interactive Smith chart, noise figure cascade and link budget</p>
+<div class="meta"><span class="chip">Engineering</span><span>Published 2026-11-20</span><span>Free · No sign-up · Works offline once loaded</span></div>
+<div class="btns"><a class="btn main" href="app.html">Open full screen ↗</a><a class="btn" href="https://mehravarun.github.io/apps/">Browse all apps</a></div>
+<div class="frame"><iframe src="app.html" title="PHASOR" loading="lazy" allow="fullscreen; clipboard-write; autoplay"></iframe></div>
+<h2>About PHASOR</h2>
+<div class="prose"><p>PHASOR is a pocket toolkit for radio-frequency engineers, students and hobbyists. It brings together the calculations you reach for every day on the bench, and it runs entirely in your browser, with nothing to install and no sign-up.</p><p>The Convert tab turns any power or voltage (dBm, dBW, watts, Vrms, Vpk, Vpp, dBµV, dBmV) into all the others at the impedance you choose. Next to it, a mismatch converter moves between VSWR, return loss, reflection coefficient, S11, mismatch loss and reflected power, with a meter showing how much power actually reaches the load.</p><p>The Smith tab is an interactive Smith chart. Drag the load point around, or type its resistance and reactance, and PHASOR solves every two-element L-network that matches it to your system impedance. It gives real inductor and capacitor values at your frequency and draws each matching path on the chart.</p><p>The Cascade tab works out a receiver chain&#x27;s total gain, noise figure (Friis), input and output IP3, sensitivity and spurious-free dynamic range. It also shows how much of the total noise each stage contributes. The Link tab builds a free-space link budget with a waterfall chart, fade margin, maximum range and Fresnel-zone radius. Your values are saved on your device.</p></div>
+<h2>How to use it</h2>
+<div class="prose"><ol><li>Pick a tab: Convert, Smith, Cascade or Link.</li><li>Type your values. Every result updates as you type.</li><li>On the Smith chart, drag the load point and tap a match solution to see its path.</li><li>Tap any result tile to copy its value.</li><li>Open the &#x27;?&#x27; notes under each panel for the formulas behind the numbers.</li></ol></div>
+
+</main>
+<footer>Daily Apps · A new free, self-contained web app every day — tools, toys, games and simulations that run right in your browser. All apps are free, run entirely in your browser and send no data anywhere.</footer>
+</div>
+</body>
+</html>

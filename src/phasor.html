@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>PHASOR — RF Field Kit</title>
+<style>
+:root{
+  --bg:#070b0a;--bg2:#0c1211;--panel:#101816;--panel2:#141e1b;--line:#1e2c28;--line2:#2a3d37;
+  --ink:#dbe9e2;--dim:#7f948c;--faint:#4a5d56;
+  --acc:#3cf0a8;--acc2:#1fbf80;--amb:#ffb547;--red:#ff5f6f;--blue:#5cb9ff;--vio:#b392ff;
+  --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased}
+body{min-height:100vh;background:
+  radial-gradient(1200px 600px at 80% -10%,rgba(60,240,168,.07),transparent 60%),
+  radial-gradient(900px 500px at -10% 110%,rgba(92,185,255,.05),transparent 60%),var(--bg)}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.35;
+  background-image:linear-gradient(rgba(255,255,255,.018) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.018) 1px,transparent 1px);
+  background-size:28px 28px}
+.wrap{max-width:1180px;margin:0 auto;padding:calc(18px + env(safe-area-inset-top)) calc(16px + env(safe-area-inset-right)) calc(60px + env(safe-area-inset-bottom)) calc(16px + env(safe-area-inset-left));position:relative}
+header{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.logo{width:44px;height:44px;flex:none}
+.logo .vec{transform-origin:22px 22px;animation:spin 6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.brand h1{font-family:var(--mono);font-size:22px;letter-spacing:.32em;font-weight:700}
+.brand h1 b{color:var(--acc);font-weight:700}
+.brand p{font-size:12px;color:var(--dim);letter-spacing:.06em;margin-top:2px}
+nav{position:sticky;top:0;z-index:10;display:flex;gap:6px;padding:8px 0 12px;background:linear-gradient(var(--bg) 75%,transparent);overflow-x:auto;scrollbar-width:none}
+nav::-webkit-scrollbar{display:none}
+nav button{flex:1 0 auto;font:600 13px var(--sans);color:var(--dim);background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 14px;cursor:pointer;display:flex;align-items:center;gap:8px;justify-content:center;transition:.2s}
+nav button svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:1.8}
+nav button:hover{color:var(--ink);border-color:var(--line2)}
+nav button.on{color:#04140d;background:var(--acc);border-color:var(--acc);box-shadow:0 0 24px rgba(60,240,168,.25)}
+section{display:none;animation:fade .35s ease}
+section.on{display:block}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.grid{display:grid;gap:14px;grid-template-columns:1fr}
+@media(min-width:880px){.g2{grid-template-columns:1fr 1fr}.g-sm{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr)}}
+.card{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:18px;padding:16px;position:relative;overflow:hidden}
+.card h2{font:700 11px var(--mono);letter-spacing:.22em;text-transform:uppercase;color:var(--dim);margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.card h2::before{content:"";width:6px;height:6px;border-radius:2px;background:var(--acc);box-shadow:0 0 10px var(--acc)}
+.card h2.amb::before{background:var(--amb);box-shadow:0 0 10px var(--amb)}
+.card h2.blu::before{background:var(--blue);box-shadow:0 0 10px var(--blue)}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end}
+.fld{display:flex;flex-direction:column;gap:5px;flex:1 1 110px;min-width:0}
+.fld label{font-size:11px;color:var(--dim);letter-spacing:.04em}
+input,select{font:500 15px var(--mono);color:var(--ink);background:var(--bg2);border:1px solid var(--line2);border-radius:10px;padding:10px 11px;width:100%;outline:none;transition:.15s;-moz-appearance:textfield}
+input::-webkit-inner-spin-button,input::-webkit-outer-spin-button{-webkit-appearance:none}
+select{cursor:pointer;appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--dim) 50%),linear-gradient(135deg,var(--dim) 50%,transparent 50%);background-position:calc(100% - 15px) 50%,calc(100% - 10px) 50%;background-size:5px 5px;background-repeat:no-repeat;padding-right:26px}
+input:focus,select:focus{border-color:var(--acc2);box-shadow:0 0 0 3px rgba(60,240,168,.12)}
+.big input{font-size:26px;font-weight:600;padding:12px 14px;color:var(--acc)}
+.big select{font-size:15px;padding:16px 26px 16px 12px}
+.ro{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-top:14px}
+.cell{background:var(--bg2);border:1px solid var(--line);border-radius:12px;padding:10px 12px;cursor:pointer;transition:.15s;position:relative}
+.cell:hover{border-color:var(--line2);transform:translateY(-1px)}
+.cell .k{font-size:10.5px;color:var(--dim);letter-spacing:.08em;text-transform:uppercase}
+.cell .v{font:600 17px var(--mono);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cell .v small{font-size:12px;color:var(--dim);font-weight:500;margin-left:3px}
+.cell.hi .v{color:var(--acc)}
+.cell.am .v{color:var(--amb)}
+.cell.rd .v{color:var(--red)}
+.meter{height:10px;border-radius:6px;background:var(--bg2);border:1px solid var(--line);overflow:hidden;margin-top:14px;display:flex}
+.meter i{display:block;height:100%;transition:width .4s cubic-bezier(.2,.8,.2,1)}
+.mlab{display:flex;justify-content:space-between;font:11px var(--mono);color:var(--dim);margin-top:6px}
+details.learn{margin-top:14px;border-top:1px dashed var(--line2);padding-top:10px}
+details.learn summary{cursor:pointer;font-size:12px;color:var(--blue);list-style:none;display:flex;gap:6px;align-items:center}
+details.learn summary::before{content:"?";font:700 10px var(--mono);width:16px;height:16px;border-radius:50%;border:1px solid var(--blue);display:inline-grid;place-items:center}
+details.learn p,details.learn li{font-size:13px;line-height:1.55;color:#a9bdb5;margin-top:8px}
+details.learn ul{padding-left:18px}
+details.learn code{font-family:var(--mono);color:var(--ink);font-size:12px;background:var(--bg2);padding:1px 5px;border-radius:5px}
+.smithbox{position:relative;width:100%;max-width:560px;margin:0 auto}
+#smith{width:100%;aspect-ratio:1;display:block;touch-action:none;cursor:crosshair}
+.hint{font-size:11.5px;color:var(--faint);text-align:center;margin-top:6px}
+.toggles{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;justify-content:center}
+.chip{font:600 11px var(--mono);letter-spacing:.06em;color:var(--dim);border:1px solid var(--line2);background:var(--bg2);border-radius:999px;padding:6px 11px;cursor:pointer;user-select:none;transition:.15s}
+.chip.on{color:var(--acc);border-color:var(--acc2);background:rgba(60,240,168,.08)}
+.sols{display:flex;flex-direction:column;gap:8px;margin-top:4px}
+.sol{border:1px solid var(--line);border-radius:14px;padding:11px 12px;background:var(--bg2);cursor:pointer;transition:.15s}
+.sol:hover{border-color:var(--line2)}
+.sol.on{border-color:var(--amb);box-shadow:0 0 0 1px var(--amb) inset,0 0 20px rgba(255,181,71,.12)}
+.sol .t{font:700 11px var(--mono);letter-spacing:.12em;color:var(--dim);display:flex;justify-content:space-between}
+.chain{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:8px;font:12.5px var(--mono)}
+.chain .n{padding:6px 9px;border-radius:9px;border:1px solid var(--line2);background:var(--panel)}
+.chain .n b{color:var(--amb);font-weight:600}
+.chain .n.end{color:var(--dim)}
+.chain .ar{color:var(--faint)}
+.empty{color:var(--dim);font-size:13px;padding:10px 0}
+table.cas{width:100%;border-collapse:separate;border-spacing:0 6px;font-size:13px}
+table.cas th{font:600 10.5px var(--mono);letter-spacing:.1em;color:var(--dim);text-align:left;padding:0 6px;text-transform:uppercase}
+table.cas td{padding:0 3px;vertical-align:middle}
+table.cas input{padding:8px 8px;font-size:14px}
+table.cas td.nm input{font-family:var(--sans);font-weight:600}
+.contrib{height:8px;background:var(--bg2);border-radius:5px;overflow:hidden;border:1px solid var(--line);min-width:60px}
+.contrib i{display:block;height:100%;background:linear-gradient(90deg,var(--acc2),var(--acc))}
+.cpct{font:11px var(--mono);color:var(--dim);margin-top:3px}
+.ib{background:none;border:1px solid var(--line2);color:var(--dim);border-radius:8px;width:28px;height:28px;cursor:pointer;font:14px var(--mono);display:inline-grid;place-items:center;transition:.15s}
+.ib:hover{color:var(--ink);border-color:var(--dim)}
+.ib.x:hover{color:var(--red);border-color:var(--red)}
+.btn{font:600 13px var(--sans);border:1px dashed var(--line2);color:var(--acc);background:transparent;border-radius:12px;padding:10px 14px;cursor:pointer;width:100%;margin-top:6px;transition:.15s}
+.btn:hover{border-color:var(--acc2);background:rgba(60,240,168,.05)}
+.tablewrap{overflow-x:auto;margin:0 -4px;padding:0 4px}
+.chart{width:100%;height:240px;display:block}
+.status{display:flex;align-items:center;gap:12px;padding:14px;border-radius:14px;margin-top:14px;border:1px solid}
+.status .dot{width:12px;height:12px;border-radius:50%;flex:none}
+.status.ok{border-color:rgba(60,240,168,.35);background:rgba(60,240,168,.06)}
+.status.ok .dot{background:var(--acc);box-shadow:0 0 14px var(--acc)}
+.status.warn{border-color:rgba(255,181,71,.35);background:rgba(255,181,71,.06)}
+.status.warn .dot{background:var(--amb);box-shadow:0 0 14px var(--amb)}
+.status.bad{border-color:rgba(255,95,111,.35);background:rgba(255,95,111,.06)}
+.status.bad .dot{background:var(--red);box-shadow:0 0 14px var(--red)}
+.status b{font:700 15px var(--mono)}
+.status span{font-size:12.5px;color:var(--dim);display:block;margin-top:2px}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);opacity:0;background:var(--acc);color:#04140d;font:600 13px var(--mono);padding:9px 16px;border-radius:999px;transition:.25s;pointer-events:none;z-index:50;box-shadow:0 8px 30px rgba(0,0,0,.5)}
+.toast.on{opacity:1;transform:translateX(-50%)}
+.unitsel{display:flex;gap:6px}
+.unitsel input{flex:1}
+.unitsel select{flex:0 0 82px}
+footer{margin-top:26px;text-align:center;font:11px var(--mono);color:var(--faint);letter-spacing:.1em}
+.sub{font-size:12px;color:var(--dim);margin:-4px 0 10px;line-height:1.5}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <svg class="logo" viewBox="0 0 44 44">
+    <circle cx="22" cy="22" r="19" fill="none" stroke="#1e2c28" stroke-width="2"/>
+    <circle cx="22" cy="22" r="12" fill="none" stroke="#1e2c28" stroke-width="1.2"/>
+    <line x1="3" y1="22" x2="41" y2="22" stroke="#1e2c28" stroke-width="1.2"/>
+    <g class="vec"><line x1="22" y1="22" x2="38" y2="13" stroke="#3cf0a8" stroke-width="2.4" stroke-linecap="round"/><circle cx="38" cy="13" r="3" fill="#3cf0a8"/></g>
+    <circle cx="22" cy="22" r="2.4" fill="#dbe9e2"/>
+  </svg>
+  <div class="brand"><h1>PHAS<b>O</b>R</h1><p>RF field kit · convert · match · cascade · link</p></div>
+</header>
+
+<nav id="tabs">
+  <button data-t="conv"><svg viewBox="0 0 24 24"><path d="M4 7h13l-3-3M20 17H7l3 3"/></svg>Convert</button>
+  <button data-t="smith"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="16" cy="12" r="5"/><path d="M3 12h18"/></svg>Smith</button>
+  <button data-t="cas"><svg viewBox="0 0 24 24"><path d="M3 12h3l3-6v12l3-6h3M15 8l6 4-6 4z"/></svg>Cascade</button>
+  <button data-t="link"><svg viewBox="0 0 24 24"><path d="M5 20V9M5 9l-3-4h6zM19 20V9M19 9l-3-4h6zM9 8c2-2 4-2 6 0"/></svg>Link</button>
+</nav>
+
+<!-- ============ CONVERT ============ -->
+<section id="t-conv">
+<div class="grid g2">
+  <div class="card">
+    <h2>Power &amp; voltage</h2>
+    <div class="row big">
+      <div class="fld" style="flex:2 1 160px"><label>Value</label><input id="pv" type="number" step="any" inputmode="decimal"></div>
+      <div class="fld" style="flex:1 1 90px"><label>Unit</label>
+        <select id="pu"><option>dBm</option><option>dBW</option><option>W</option><option>mW</option><option>µW</option><option>Vrms</option><option>Vpk</option><option>Vpp</option><option>dBµV</option><option>dBmV</option></select></div>
+      <div class="fld" style="flex:0 1 80px"><label>Z₀ (Ω)</label><input id="pz" type="number" step="any" inputmode="decimal"></div>
+    </div>
+    <div class="ro" id="pout"></div>
+    <details class="learn"><summary>How these relate</summary>
+      <p><code>dBm = 10·log₁₀(P / 1 mW)</code>. 0 dBm is 1 mW, +30 dBm is 1 W, and every +3 dB doubles the power.</p>
+      <p>Voltages only mean something once you fix an impedance: <code>P = V²rms / Z₀</code>. Into 50 Ω, 0 dBm ≈ 224 mVrms ≈ 107 dBµV.</p>
+      <p>Tap any readout to copy it.</p>
+    </details>
+  </div>
+  <div class="card">
+    <h2 class="amb">Mismatch</h2>
+    <div class="row big">
+      <div class="fld" style="flex:2 1 160px"><label>Value</label><input id="mv" type="number" step="any" inputmode="decimal"></div>
+      <div class="fld" style="flex:1 1 140px"><label>Given as</label>
+        <select id="mu"><option value="vswr">VSWR</option><option value="rl">Return loss (dB)</option><option value="g">|Γ| reflection coeff.</option><option value="s11">S11 (dB)</option><option value="ml">Mismatch loss (dB)</option><option value="pr">Reflected power (%)</option></select></div>
+    </div>
+    <div class="ro" id="mout"></div>
+    <div class="meter"><i id="mdel" style="background:linear-gradient(90deg,var(--acc2),var(--acc))"></i><i id="mref" style="background:var(--red)"></i></div>
+    <div class="mlab"><span id="mdl">delivered</span><span id="mrl">reflected</span></div>
+    <details class="learn"><summary>What these numbers mean</summary>
+      <p>When a load isn't exactly Z₀, some of the wave bounces back. <code>|Γ|</code> is the voltage fraction that reflects. <code>VSWR = (1+|Γ|)/(1−|Γ|)</code> and <code>RL = −20·log₁₀|Γ|</code>.</p>
+      <p>S11 in dB is just −RL. Mismatch loss is the power you lose to reflection: <code>−10·log₁₀(1−|Γ|²)</code>. A VSWR of 2:1 sounds bad but only costs about 0.5 dB.</p>
+    </details>
+  </div>
+</div>
+</section>
+
+<!-- ============ SMITH ============ -->
+<section id="t-smith">
+<div class="grid g-sm">
+  <div class="card">
+    <h2>Smith chart</h2>
+    <div class="smithbox"><canvas id="smith"></canvas></div>
+    <div class="hint">Drag on the chart to move the load</div>
+    <div class="toggles">
+      <span class="chip" data-tg="adm">Admittance grid</span>
+      <span class="chip" data-tg="vswr">VSWR circle</span>
+      <span class="chip" data-tg="paths">Match paths</span>
+    </div>
+  </div>
+  <div class="grid" style="align-content:start">
+    <div class="card">
+      <h2 class="amb">Load</h2>
+      <div class="row">
+        <div class="fld"><label>R (Ω)</label><input id="sr" type="number" step="any" inputmode="decimal"></div>
+        <div class="fld"><label>jX (Ω)</label><input id="sx" type="number" step="any" inputmode="decimal"></div>
+        <div class="fld"><label>Z₀ (Ω)</label><input id="sz" type="number" step="any" inputmode="decimal"></div>
+        <div class="fld"><label>f (MHz)</label><input id="sf" type="number" step="any" inputmode="decimal"></div>
+      </div>
+      <div class="ro" id="sout"></div>
+    </div>
+    <div class="card">
+      <h2 class="blu">L-network match → Z₀</h2>
+      <div class="sols" id="sols"></div>
+      <details class="learn"><summary>How an L-match works</summary>
+        <p>Two lossless parts, one in series and one in shunt, are enough to turn any load with R &gt; 0 into a resistive Z₀. On the chart, a series part moves the point along a circle of constant resistance. A shunt part moves it along a circle of constant conductance. The orange path shows the two moves that end at the centre.</p>
+        <p>Up to four solutions exist. Pick by part availability, by DC path (a shunt L shorts DC to ground), and by whether you need low-pass or high-pass behaviour. Values are ideal and assume lossless parts.</p>
+      </details>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ============ CASCADE ============ -->
+<section id="t-cas">
+<div class="grid">
+  <div class="card">
+    <h2>Receiver chain</h2>
+    <p class="sub">Stages in signal order. Use a high OIP3 such as 100 dBm for passive parts. The bar shows each stage's share of the total noise.</p>
+    <div class="tablewrap">
+    <table class="cas"><thead><tr><th>Stage</th><th>Gain dB</th><th>NF dB</th><th>OIP3 dBm</th><th>Noise share</th><th></th></tr></thead><tbody id="cbody"></tbody></table>
+    </div>
+    <button class="btn" id="cadd">+ Add stage</button>
+  </div>
+  <div class="grid g2">
+    <div class="card">
+      <h2 class="amb">Cascade totals</h2>
+      <div class="ro" id="cout" style="margin-top:0"></div>
+      <div class="row" style="margin-top:14px">
+        <div class="fld"><label>Bandwidth</label><div class="unitsel"><input id="cbw" type="number" step="any" inputmode="decimal"><select id="cbu"><option value="1">Hz</option><option value="1e3">kHz</option><option value="1e6">MHz</option></select></div></div>
+        <div class="fld"><label>Required SNR (dB)</label><input id="csnr" type="number" step="any" inputmode="decimal"></div>
+      </div>
+      <div class="ro" id="csens"></div>
+    </div>
+    <div class="card">
+      <h2 class="blu">Through the chain</h2>
+      <canvas class="chart" id="cchart"></canvas>
+      <details class="learn"><summary>Why the first stage matters most</summary>
+        <p>Friis: <code>F = F₁ + (F₂−1)/G₁ + (F₃−1)/(G₁G₂) + …</code>. Gain early in the chain makes later noise matter less. That is why the LNA goes up front and why loss before it adds straight to the system NF.</p>
+        <p>Linearity works the other way. Gain before a stage makes that stage's IP3 matter more: <code>1/IIP3 = 1/IIP3₁ + G₁/IIP3₂ + …</code>. Too much front-end gain buys a low NF at the cost of a poor IIP3. SFDR measures that trade-off.</p>
+        <p>Noise floor = <code>−174 dBm/Hz + 10·log₁₀(BW) + NF</code>.</p>
+      </details>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ============ LINK ============ -->
+<section id="t-link">
+<div class="grid g2">
+  <div class="card">
+    <h2>Link parameters</h2>
+    <div class="row">
+      <div class="fld"><label>Tx power (dBm)</label><input id="lpt" type="number" step="any" inputmode="decimal"></div>
+      <div class="fld"><label>Tx antenna (dBi)</label><input id="lgt" type="number" step="any" inputmode="decimal"></div>
+      <div class="fld"><label>Tx cable loss (dB)</label><input id="llt" type="number" step="any" inputmode="decimal"></div>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <div class="fld"><label>Frequency</label><div class="unitsel"><input id="lf" type="number" step="any" inputmode="decimal"><select id="lfu"><option value="1">MHz</option><option value="1000">GHz</option></select></div></div>
+      <div class="fld"><label>Distance</label><div class="unitsel"><input id="ld" type="number" step="any" inputmode="decimal"><select id="ldu"><option value="0.001">m</option><option value="1">km</option></select></div></div>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <div class="fld"><label>Rx antenna (dBi)</label><input id="lgr" type="number" step="any" inputmode="decimal"></div>
+      <div class="fld"><label>Rx cable loss (dB)</label><input id="llr" type="number" step="any" inputmode="decimal"></div>
+      <div class="fld"><label>Extra loss (dB)</label><input id="lx" type="number" step="any" inputmode="decimal"></div>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <div class="fld"><label>Rx sensitivity (dBm)</label><input id="lsens" type="number" step="any" inputmode="decimal"></div>
+      <div class="fld"><label>Fade margin wanted (dB)</label><input id="lfm" type="number" step="any" inputmode="decimal"></div>
+    </div>
+    <div id="lstat"></div>
+  </div>
+  <div class="card">
+    <h2 class="amb">Budget waterfall</h2>
+    <canvas class="chart" id="lchart" style="height:260px"></canvas>
+    <div class="ro" id="lout"></div>
+    <details class="learn"><summary>Assumptions</summary>
+      <p>Free-space path loss: <code>FSPL = 20·log₁₀(d km) + 20·log₁₀(f MHz) + 32.44</code>. This assumes clear line of sight. Use Extra loss for walls, foliage or rain. Indoors, real loss can be 20–40 dB higher.</p>
+      <p>Keep at least 60% of the first Fresnel zone free of obstacles. Its radius at mid-path is shown, so you can check whether your mast height is enough.</p>
+    </details>
+  </div>
+</div>
+</section>
+
+<footer>PHASOR · all math runs locally · values saved on this device</footer>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(()=>{
+"use strict";
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const LOG=Math.log10, TAU=2*Math.PI;
+
+/* ---------------- state ---------------- */
+const DEF={
+  tab:"conv",
+  conv:{pv:0,pu:"dBm",pz:50,mv:2,mu:"vswr"},
+  sm:{r:25,x:-35,z0:50,f:915,adm:false,vswr:true,paths:true,sel:0},
+  cas:{bw:200,bu:"1e3",snr:10,stages:[
+    {n:"SAW filter",g:-2,nf:2,ip:100},
+    {n:"LNA",g:18,nf:1.1,ip:32},
+    {n:"Mixer",g:-7,nf:7,ip:22},
+    {n:"IF amp",g:22,nf:4,ip:36}]},
+  link:{pt:20,gt:2,lt:1,f:2400,fu:"1",d:1,du:"1",gr:2,lr:1,x:0,sens:-90,fm:10}
+};
+let S;
+try{S=JSON.parse(localStorage.getItem("phasor.v1"))}catch(e){}
+if(!S||typeof S!=="object")S={};
+for(const k in DEF){ if(typeof DEF[k]==="object"&&!Array.isArray(DEF[k])) S[k]=Object.assign({},DEF[k],S[k]||{}); else if(S[k]===undefined) S[k]=DEF[k]; }
+if(!Array.isArray(S.cas.stages)||!S.cas.stages.length) S.cas.stages=DEF.cas.stages.map(o=>({...o}));
+let saveT; const save=()=>{clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem("phasor.v1",JSON.stringify(S))}catch(e){}},250)};
+
+/* ---------------- helpers ---------------- */
+const num=v=>{const n=parseFloat(v);return isFinite(n)?n:NaN};
+const PRE=[[1e12,"T"],[1e9,"G"],[1e6,"M"],[1e3,"k"],[1,""],[1e-3,"m"],[1e-6,"µ"],[1e-9,"n"],[1e-12,"p"],[1e-15,"f"],[1e-18,"a"]];
+function si(v,u,d=4){
+  if(!isFinite(v))return["—",""];
+  if(v===0)return["0",u];
+  const a=Math.abs(v);
+  for(const[p,s]of PRE) if(a>=p*0.99995) return[(v/p).toPrecision(d).replace(/(\.\d*?)0+$/,"$1").replace(/\.$/,""),s+u];
+  return[v.toExponential(2),u];
+}
+const fx=(v,d=2)=>isFinite(v)?(Math.abs(v)<1e-12?0:v).toFixed(d):"—";
+function cell(k,v,u,cls=""){return `<div class="cell ${cls}" data-copy="${v}${u?" "+u:""}"><div class="k">${k}</div><div class="v">${v}<small>${u||""}</small></div></div>`}
+function cellSI(k,val,u,cls,d){const[a,b]=si(val,u,d);return cell(k,a,b,cls)}
+const toast=(()=>{const t=$("#toast");let h;return m=>{t.textContent=m;t.classList.add("on");clearTimeout(h);h=setTimeout(()=>t.classList.remove("on"),1300)}})();
+document.addEventListener("click",e=>{const c=e.target.closest(".cell");if(!c)return;const txt=c.dataset.copy;
+  if(navigator.clipboard&&navigator.clipboard.writeText)navigator.clipboard.writeText(txt).then(()=>toast("Copied "+txt),()=>toast(txt));else toast(txt)});
+function bind(id,obj,key,cb,isNum=true){
+  const el=$("#"+id); el.value=obj[key];
+  el.addEventListener("input",()=>{obj[key]=isNum&&el.tagName==="INPUT"?el.value:el.value;save();cb()});
+  return el;
+}
+function fit(cv){
+  const r=cv.getBoundingClientRect(),dpr=window.devicePixelRatio||1;
+  cv.width=Math.max(1,Math.round(r.width*dpr));cv.height=Math.max(1,Math.round(r.height*dpr));
+  const ctx=cv.getContext("2d");ctx.setTransform(dpr,0,0,dpr,0,0);return{ctx,w:r.width,h:r.height};
+}
+const css=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const COL={acc:css("--acc"),amb:css("--amb"),red:css("--red"),blue:css("--blue"),vio:css("--vio"),dim:css("--dim"),faint:css("--faint"),line:css("--line"),line2:css("--line2"),ink:css("--ink"),bg2:css("--bg2")};
+
+/* complex */
+const C=(re,im=0)=>({re,im});
+const cadd=(a,b)=>C(a.re+b.re,a.im+b.im), csub=(a,b)=>C(a.re-b.re,a.im-b.im);
+const cdiv=(a,b)=>{const d=b.re*b.re+b.im*b.im;return C((a.re*b.re+a.im*b.im)/d,(a.im*b.re-a.re*b.im)/d)};
+const cinv=a=>cdiv(C(1),a), cabs=a=>Math.hypot(a.re,a.im);
+const gam=(Z,z0)=>{const z=C(Z.re/z0,Z.im/z0);return cdiv(csub(z,C(1)),cadd(z,C(1)))};
+
+/* ---------------- tabs ---------------- */
+const drawers={};
+function setTab(t){S.tab=t;save();$$("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.t===t));
+  $$("section").forEach(s=>s.classList.toggle("on",s.id==="t-"+t));requestAnimationFrame(()=>drawers[t]&&drawers[t]())}
+$$("#tabs button").forEach(b=>b.addEventListener("click",()=>setTab(b.dataset.t)));
+
+/* ================= CONVERT ================= */
+function renderPower(){
+  const c=S.conv,v=num(c.pv),Z=num(c.pz)>0?num(c.pz):50;let W=NaN;
+  switch(c.pu){
+    case"dBm":W=Math.pow(10,(v-30)/10);break;case"dBW":W=Math.pow(10,v/10);break;
+    case"W":W=v;break;case"mW":W=v/1e3;break;case"µW":W=v/1e6;break;
+    case"Vrms":W=v*v/Z;break;case"Vpk":W=(v/Math.SQRT2)**2/Z;break;case"Vpp":W=(v/(2*Math.SQRT2))**2/Z;break;
+    case"dBµV":W=(Math.pow(10,v/20)*1e-6)**2/Z;break;case"dBmV":W=(Math.pow(10,v/20)*1e-3)**2/Z;break;
+  }
+  const out=$("#pout");
+  if(!isFinite(W)||W<=0){out.innerHTML=`<div class="empty">Enter a positive power or voltage.</div>`;return}
+  const dBm=10*LOG(W*1e3),Vr=Math.sqrt(W*Z);
+  out.innerHTML=
+    cell("dBm",fx(dBm,2),"dBm","hi")+cell("dBW",fx(dBm-30,2),"dBW")+
+    cellSI("Power",W,"W","am")+cellSI("V rms",Vr,"V")+cellSI("V peak",Vr*Math.SQRT2,"V")+cellSI("V p-p",Vr*2*Math.SQRT2,"V")+
+    cell("dBµV",fx(20*LOG(Vr*1e6),2),"dBµV")+cell("dBmV",fx(20*LOG(Vr*1e3),2),"dBmV")+cellSI("I rms",Vr/Z,"A")+
+    cell("dBm/Hz →1 MHz",fx(dBm-60,2),"dBm/Hz");
+}
+function renderMismatch(){
+  const c=S.conv,v=num(c.mv);let g=NaN;
+  switch(c.mu){
+    case"vswr":g=v>=1?(v-1)/(v+1):NaN;break;case"rl":g=v>=0?Math.pow(10,-v/20):NaN;break;
+    case"s11":g=v<=0?Math.pow(10,v/20):NaN;break;case"g":g=v>=0&&v<=1?v:NaN;break;
+    case"ml":g=v>=0?Math.sqrt(1-Math.pow(10,-v/10)):NaN;break;case"pr":g=v>=0&&v<=100?Math.sqrt(v/100):NaN;break;
+  }
+  const out=$("#mout");
+  if(!isFinite(g)){out.innerHTML=`<div class="empty">Out of range for this quantity (VSWR ≥ 1, |Γ| 0–1, RL ≥ 0, S11 ≤ 0).</div>`;$("#mdel").style.width="0";$("#mref").style.width="0";return}
+  const sw=g>=1?Infinity:(1+g)/(1-g),rl=-20*LOG(g),ml=-10*LOG(1-g*g),pr=g*g*100,z0=num(S.sm.z0)>0?num(S.sm.z0):50;
+  const q=rl>=20?"hi":rl>=10?"am":"rd";
+  out.innerHTML=cell("VSWR",isFinite(sw)?fx(sw,3)+" : 1":"∞","",q)+cell("Return loss",isFinite(rl)?fx(rl,2):"0","dB",q)+
+    cell("|Γ|",fx(g,4),"")+cell("S11",isFinite(rl)?fx(-rl,2):"0","dB")+
+    cell("Mismatch loss",isFinite(ml)?fx(ml,3):"∞","dB")+cell("Reflected",fx(pr,2),"%")+
+    cell("Pure R ↑ ("+z0+" Ω)",isFinite(sw)?fx(z0*sw,1):"∞","Ω")+cell("Pure R ↓ ("+z0+" Ω)",isFinite(sw)?fx(z0/sw,2):"0","Ω");
+  $("#mdel").style.width=(100-pr)+"%";$("#mref").style.width=pr+"%";
+  $("#mdl").textContent=fx(100-pr,1)+"% delivered";$("#mrl").textContent=fx(pr,1)+"% reflected";
+}
+bind("pv",S.conv,"pv",renderPower);bind("pu",S.conv,"pu",renderPower);bind("pz",S.conv,"pz",renderPower);
+bind("mv",S.conv,"mv",renderMismatch);bind("mu",S.conv,"mu",renderMismatch);
+
+/* ================= SMITH ================= */
+const cv=$("#smith");
+function lmatch(ZL,R0){
+  const RL=ZL.re,XL=ZL.im,out=[];
+  if(!(RL>0)||!(R0>0))return out;
+  const m2=RL*RL+XL*XL,D=m2-R0*RL;
+  if(D>=0) for(const s of[1,-1]){
+    const B=(XL+s*Math.sqrt(RL/R0)*Math.sqrt(D))/m2;
+    if(Math.abs(B)<1e-15)continue;
+    const X=1/B+XL*R0/RL-R0/(B*RL);
+    const Z1=cinv(cadd(cinv(ZL),C(0,B))),Zin=cadd(Z1,C(0,X));
+    out.push({topo:"A",B,X,Zin,mid:Z1});
+  }
+  if(RL<R0) for(const s of[1,-1]){
+    const X=s*Math.sqrt(RL*(R0-RL))-XL,B=s*Math.sqrt((R0-RL)/RL)/R0;
+    const Z1=cadd(ZL,C(0,X)),Zin=cinv(cadd(cinv(Z1),C(0,B)));
+    out.push({topo:"B",B,X,Zin,mid:Z1});
+  }
+  return out.filter(o=>isFinite(o.X)&&isFinite(o.B)&&Math.abs(o.Zin.re-R0)<R0*1e-6+1e-9&&Math.abs(o.Zin.im)<R0*1e-6+1e-9);
+}
+function partS(X,w){ if(Math.abs(X)<1e-9)return{t:"wire",v:"0 Ω"}; if(X>0){const[a,b]=si(X/w,"H",3);return{t:"Series L",v:a+" "+b}} const[a,b]=si(-1/(w*X),"F",3);return{t:"Series C",v:a+" "+b} }
+function partP(B,w){ if(Math.abs(B)<1e-12)return{t:"open",v:"—"}; if(B>0){const[a,b]=si(B/w,"F",3);return{t:"Shunt C",v:a+" "+b}} const[a,b]=si(-1/(w*B),"H",3);return{t:"Shunt L",v:a+" "+b} }
+function smithPaths(sol,ZL){
+  const N=80,p1=[],p2=[];
+  if(sol.topo==="A"){ const YL=cinv(ZL);
+    for(let i=0;i<=N;i++)p1.push(cinv(cadd(YL,C(0,sol.B*i/N))));
+    for(let i=0;i<=N;i++)p2.push(cadd(sol.mid,C(0,sol.X*i/N)));
+  }else{
+    for(let i=0;i<=N;i++)p1.push(cadd(ZL,C(0,sol.X*i/N)));
+    const Y1=cinv(sol.mid);for(let i=0;i<=N;i++)p2.push(cinv(cadd(Y1,C(0,sol.B*i/N))));
+  }
+  return[p1,p2];
+}
+let lastSols=[];
+function renderSmith(){
+  const s=S.sm,R=num(s.r),X=num(s.x),z0=num(s.z0)>0?num(s.z0):50,f=num(s.f)*1e6,w=TAU*f;
+  const ok=isFinite(R)&&isFinite(X)&&R>=0;
+  const out=$("#sout");
+  if(!ok){out.innerHTML=`<div class="empty">R must be ≥ 0.</div>`;$("#sols").innerHTML="";lastSols=[];drawSmith();return}
+  const Z=C(R,X),G=gam(Z,z0),gm=cabs(G),ga=Math.atan2(G.im,G.re)*180/Math.PI;
+  const sw=gm>=1?Infinity:(1+gm)/(1-gm),rl=-20*LOG(gm),Y=cinv(Z);
+  const q=rl>=20?"hi":rl>=10?"am":"rd";
+  let eq="—",eqU="";
+  if(isFinite(w)&&w>0){ if(X>0){[eq,eqU]=si(X/w,"H",3)} else if(X<0){[eq,eqU]=si(-1/(w*X),"F",3)} else {eq="0";eqU="Ω"} }
+  out.innerHTML=cell("z (norm.)",fx(R/z0,3)+(X>=0?" + j":" − j")+fx(Math.abs(X)/z0,3),"")+
+    cell("Γ",fx(gm,3)+" ∠ "+fx(ga,1)+"°","",q)+cell("VSWR",isFinite(sw)?fx(sw,2):"∞",": 1",q)+
+    cell("Return loss",isFinite(rl)?fx(rl,2):"0","dB",q)+
+    cell("Y",fx(Y.re*1e3,3)+(Y.im>=0?" + j":" − j")+fx(Math.abs(Y.im)*1e3,3),"mS")+
+    cell("Q (|X|/R)",R>0?fx(Math.abs(X)/R,2):"∞","")+
+    cell(X>0?"X as inductor":X<0?"X as capacitor":"Reactance",eq,eqU);
+  // match
+  const sl=$("#sols");
+  if(gm<0.003){lastSols=[];sl.innerHTML=`<div class="empty">✓ Already matched to ${z0} Ω.</div>`;drawSmith();return}
+  if(R<=0){lastSols=[];sl.innerHTML=`<div class="empty">A purely reactive load (R = 0) can't be matched with lossless parts.</div>`;drawSmith();return}
+  if(!(w>0)){lastSols=[];sl.innerHTML=`<div class="empty">Enter a frequency to get component values.</div>`;drawSmith();return}
+  lastSols=lmatch(Z,z0);
+  if(s.sel>=lastSols.length)s.sel=0;
+  sl.innerHTML=lastSols.map((o,i)=>{
+    const ps=partS(o.X,w),pp=partP(o.B,w);
+    const lp=(o.topo==="A"?(ps.t==="Series L"?1:0)+(pp.t==="Shunt C"?1:0):(ps.t==="Series L"?1:0)+(pp.t==="Shunt C"?1:0));
+    const kind=lp===2?"low-pass":lp===0?"high-pass":"band-pass-ish";
+    const dc=pp.t==="Shunt L"?" · shunt L shorts DC":"";
+    const n=(p)=>`<span class="n">${p.t} <b>${p.v}</b></span>`;
+    const chain=o.topo==="A"
+      ? `<span class="n end">Z₀</span><span class="ar">→</span>${n(ps)}<span class="ar">→</span>${n(pp)}<span class="ar">→</span><span class="n end">Load</span>`
+      : `<span class="n end">Z₀</span><span class="ar">→</span>${n(pp)}<span class="ar">→</span>${n(ps)}<span class="ar">→</span><span class="n end">Load</span>`;
+    return `<div class="sol ${i===s.sel?"on":""}" data-i="${i}"><div class="t"><span>SOLUTION ${i+1}</span><span>${kind}${dc}</span></div><div class="chain">${chain}</div></div>`;
+  }).join("")||`<div class="empty">No L-match found.</div>`;
+  drawSmith();
+}
+$("#sols").addEventListener("click",e=>{const d=e.target.closest(".sol");if(!d)return;S.sm.sel=+d.dataset.i;save();renderSmith()});
+$$(".chip[data-tg]").forEach(c=>{const k=c.dataset.tg;c.classList.toggle("on",!!S.sm[k]);c.addEventListener("click",()=>{S.sm[k]=!S.sm[k];c.classList.toggle("on",S.sm[k]);save();drawSmith()})});
+
+function drawSmith(){
+  if(!cv.offsetParent)return;
+  const{ctx,w,h}=fit(cv),cx=w/2,cy=h/2,rad=Math.min(w,h)/2-22;
+  const P=(u,v)=>[cx+u*rad,cy-v*rad];
+  ctx.clearRect(0,0,w,h);
+  // backdrop
+  const bg=ctx.createRadialGradient(cx,cy,rad*.1,cx,cy,rad);bg.addColorStop(0,"rgba(60,240,168,.05)");bg.addColorStop(1,"rgba(60,240,168,.012)");
+  ctx.fillStyle=bg;ctx.beginPath();ctx.arc(cx,cy,rad,0,TAU);ctx.fill();
+  ctx.save();ctx.beginPath();ctx.arc(cx,cy,rad,0,TAU);ctx.clip();
+  const rs=[0.2,0.5,1,2,5],xs=[0.2,0.5,1,2,5];
+  const grid=(sign,col,lw)=>{
+    ctx.strokeStyle=col;ctx.lineWidth=lw;
+    for(const r of rs){ctx.beginPath();ctx.arc(cx+sign*r/(1+r)*rad,cy,rad/(1+r),0,TAU);ctx.stroke()}
+    for(const x of xs)for(const sg of[1,-1]){ctx.beginPath();ctx.arc(cx+sign*rad,cy-sg*rad/x,rad/x,0,TAU);ctx.stroke()}
+  };
+  if(S.sm.adm)grid(-1,"rgba(179,146,255,.22)",1);
+  grid(1,"rgba(127,148,140,.28)",1);
+  // finer
+  ctx.strokeStyle="rgba(127,148,140,.09)";
+  for(const r of[0.1,0.3,0.7,1.5,3,10]){ctx.beginPath();ctx.arc(cx+r/(1+r)*rad,cy,rad/(1+r),0,TAU);ctx.stroke()}
+  for(const x of[0.1,0.3,0.7,1.5,3,10])for(const sg of[1,-1]){ctx.beginPath();ctx.arc(cx+rad,cy-sg*rad/x,rad/x,0,TAU);ctx.stroke()}
+  ctx.restore();
+  // outer + axis
+  ctx.strokeStyle="rgba(219,233,226,.55)";ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(cx,cy,rad,0,TAU);ctx.stroke();
+  ctx.strokeStyle="rgba(127,148,140,.45)";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(cx-rad,cy);ctx.lineTo(cx+rad,cy);ctx.stroke();
+  // labels
+  ctx.font="10px "+css("--mono");ctx.fillStyle=COL.dim;ctx.textAlign="center";
+  for(const r of[0,...rs]){const u=(r-1)/(r+1);const[x,y]=P(u,0);ctx.fillText(r,x+(r===0?8:-9),y-4)}
+  for(const x of xs)for(const sg of[1,-1]){const g=cdiv(C(-1,sg*x),C(1,sg*x));const a=Math.atan2(g.im,g.re);const[px,py]=[cx+Math.cos(a)*(rad+12),cy-Math.sin(a)*(rad+12)];ctx.fillText((sg>0?"+":"−")+x,px,py+3)}
+  ctx.fillText("∞",cx+rad+11,cy+3);
+  const s=S.sm,R=num(s.r),X=num(s.x),z0=num(s.z0)>0?num(s.z0):50;
+  if(!(isFinite(R)&&isFinite(X)&&R>=0))return;
+  const Z=C(R,X),G=gam(Z,z0),gm=cabs(G);
+  if(S.sm.vswr&&gm>0.003){ctx.setLineDash([4,5]);ctx.strokeStyle="rgba(92,185,255,.6)";ctx.lineWidth=1.2;ctx.beginPath();ctx.arc(cx,cy,gm*rad,0,TAU);ctx.stroke();ctx.setLineDash([])}
+  // paths
+  if(S.sm.paths&&lastSols.length){
+    const drawP=(pts,col,lw,alpha)=>{ctx.globalAlpha=alpha;ctx.strokeStyle=col;ctx.lineWidth=lw;ctx.beginPath();
+      pts.forEach((z,i)=>{const g=gam(z,z0);const[x,y]=P(g.re,g.im);i?ctx.lineTo(x,y):ctx.moveTo(x,y)});ctx.stroke();ctx.globalAlpha=1};
+    lastSols.forEach((o,i)=>{if(i===s.sel)return;const[a,b]=smithPaths(o,Z);drawP(a,COL.dim,1,.35);drawP(b,COL.dim,1,.35)});
+    const o=lastSols[s.sel];
+    if(o){const[a,b]=smithPaths(o,Z);ctx.shadowColor=COL.amb;ctx.shadowBlur=10;drawP(a,COL.amb,2.6,1);drawP(b,"#ffd38a",2.6,1);ctx.shadowBlur=0;
+      const gmid=gam(o.mid,z0);const[mx,my]=P(gmid.re,gmid.im);ctx.fillStyle=COL.amb;ctx.beginPath();ctx.arc(mx,my,3.5,0,TAU);ctx.fill();}
+  }
+  // centre
+  ctx.strokeStyle=COL.acc;ctx.lineWidth=1.5;ctx.beginPath();ctx.arc(cx,cy,5,0,TAU);ctx.stroke();
+  // point
+  const[px,py]=P(G.re,G.im);
+  ctx.strokeStyle="rgba(60,240,168,.35)";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(px,py);ctx.stroke();
+  const glow=ctx.createRadialGradient(px,py,0,px,py,18);glow.addColorStop(0,"rgba(60,240,168,.55)");glow.addColorStop(1,"rgba(60,240,168,0)");
+  ctx.fillStyle=glow;ctx.beginPath();ctx.arc(px,py,18,0,TAU);ctx.fill();
+  ctx.fillStyle=COL.acc;ctx.beginPath();ctx.arc(px,py,5.5,0,TAU);ctx.fill();
+  ctx.fillStyle="#04140d";ctx.beginPath();ctx.arc(px,py,2,0,TAU);ctx.fill();
+  ctx.font="600 11px "+css("--mono");ctx.fillStyle=COL.ink;ctx.textAlign=px>cx?"right":"left";
+  ctx.fillText(`${fx(R,1)}${X>=0?"+":"−"}j${fx(Math.abs(X),1)} Ω`,px+(px>cx?-12:12),py-10);
+}
+let drag=false;
+function fromPointer(e){
+  const r=cv.getBoundingClientRect(),rad=Math.min(r.width,r.height)/2-22;
+  let u=(e.clientX-r.left-r.width/2)/rad,v=-(e.clientY-r.top-r.height/2)/rad;
+  const m=Math.hypot(u,v);if(m>0.995){u*=0.995/m;v*=0.995/m}
+  const z=cdiv(C(1+u,v),C(1-u,-v)),z0=num(S.sm.z0)>0?num(S.sm.z0):50;
+  S.sm.r=Math.round(Math.max(0,z.re*z0)*10)/10;S.sm.x=Math.round(z.im*z0*10)/10;
+  $("#sr").value=S.sm.r;$("#sx").value=S.sm.x;save();renderSmith();
+}
+cv.addEventListener("pointerdown",e=>{drag=true;cv.setPointerCapture(e.pointerId);fromPointer(e)});
+cv.addEventListener("pointermove",e=>{if(drag)fromPointer(e)});
+const end=()=>drag=false;cv.addEventListener("pointerup",end);cv.addEventListener("pointercancel",end);
+bind("sr",S.sm,"r",renderSmith);bind("sx",S.sm,"x",renderSmith);bind("sz",S.sm,"z0",()=>{renderSmith();renderMismatch()});bind("sf",S.sm,"f",renderSmith);
+drawers.smith=drawSmith;
+
+/* ================= CASCADE ================= */
+const cbody=$("#cbody");
+function buildRows(){
+  cbody.innerHTML=S.cas.stages.map((s,i)=>`<tr data-i="${i}">
+    <td class="nm"><input data-k="n" value="${String(s.n).replace(/"/g,"&quot;")}" style="min-width:96px"></td>
+    <td><input data-k="g" type="number" step="any" inputmode="decimal" value="${s.g}" style="min-width:64px"></td>
+    <td><input data-k="nf" type="number" step="any" inputmode="decimal" value="${s.nf}" style="min-width:58px"></td>
+    <td><input data-k="ip" type="number" step="any" inputmode="decimal" value="${s.ip}" style="min-width:64px"></td>
+    <td style="min-width:80px"><div class="contrib"><i></i></div><div class="cpct">—</div></td>
+    <td style="white-space:nowrap"><button class="ib" data-a="up" title="Move up">↑</button> <button class="ib x" data-a="del" title="Remove">×</button></td></tr>`).join("");
+}
+cbody.addEventListener("input",e=>{const t=e.target,tr=t.closest("tr");if(!tr)return;S.cas.stages[+tr.dataset.i][t.dataset.k]=t.value;save();calcCas()});
+cbody.addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;const i=+b.closest("tr").dataset.i,st=S.cas.stages;
+  if(b.dataset.a==="del"){if(st.length>1)st.splice(i,1);else return toast("Need at least one stage")}
+  if(b.dataset.a==="up"&&i>0)[st[i-1],st[i]]=[st[i],st[i-1]];
+  save();buildRows();calcCas()});
+$("#cadd").addEventListener("click",()=>{S.cas.stages.push({n:"Stage "+(S.cas.stages.length+1),g:10,nf:3,ip:30});save();buildRows();calcCas()});
+let casTrace=null;
+function calcCas(){
+  const st=S.cas.stages.map(s=>({g:num(s.g),nf:num(s.nf),ip:num(s.ip)}));
+  const bad=st.some(s=>!isFinite(s.g)||!isFinite(s.nf)||s.nf<0);
+  if(bad){$("#cout").innerHTML=`<div class="empty">Each stage needs a gain and an NF ≥ 0.</div>`;$("#csens").innerHTML="";casTrace=null;drawCas();return}
+  let Gp=1,F=0,invIIP=0;const terms=[],cumG=[0],cumNF=[0];
+  st.forEach((s,i)=>{const Fi=Math.pow(10,s.nf/10),Gi=Math.pow(10,s.g/10);
+    const term=i===0?Fi-1:(Fi-1)/Gp;terms.push(term);F+=(i===0?Fi:term);
+    if(isFinite(s.ip)){const iip=Math.pow(10,(s.ip-s.g)/10);invIIP+=Gp/iip}
+    Gp*=Gi;cumG.push(10*LOG(Gp));cumNF.push(10*LOG(F))});
+  const Gt=10*LOG(Gp),NF=10*LOG(F),IIP3=invIIP>0?-10*LOG(invIIP):Infinity,OIP3=IIP3+Gt,Te=290*(F-1);
+  const tot=F-1;
+  [...cbody.children].forEach((tr,i)=>{const p=tot>0?terms[i]/tot*100:0;tr.querySelector(".contrib i").style.width=Math.max(0,Math.min(100,p))+"%";tr.querySelector(".cpct").textContent=fx(p,1)+"%"});
+  $("#cout").innerHTML=cell("Total gain",fx(Gt,2),"dB","hi")+cell("System NF",fx(NF,2),"dB","am")+cell("Noise temp",fx(Te,0),"K")+
+    cell("Input IP3",isFinite(IIP3)?fx(IIP3,2):"∞","dBm")+cell("Output IP3",isFinite(OIP3)?fx(OIP3,2):"∞","dBm");
+  const bw=num(S.cas.bw)*num(S.cas.bu),snr=num(S.cas.snr);
+  if(bw>0&&isFinite(snr)){const floor=-174+10*LOG(bw)+NF,sens=floor+snr,sfdr=isFinite(IIP3)?2/3*(IIP3-floor):Infinity;
+    $("#csens").innerHTML=cell("Noise floor",fx(floor,2),"dBm")+cell("Sensitivity",fx(sens,2),"dBm","hi")+cell("SFDR",isFinite(sfdr)?fx(sfdr,1):"∞","dB")+cell("Floor at output",fx(floor+Gt,2),"dBm");
+  }else $("#csens").innerHTML=`<div class="empty">Enter a bandwidth &gt; 0 and an SNR.</div>`;
+  casTrace={cumG,cumNF,names:["In",...S.cas.stages.map(s=>s.n)]};drawCas();
+}
+function drawCas(){
+  const c=$("#cchart");if(!c.offsetParent)return;const{ctx,w,h}=fit(c);ctx.clearRect(0,0,w,h);
+  if(!casTrace)return;const{cumG,cumNF,names}=casTrace,n=cumG.length;
+  const L=34,Rm=34,T=16,B=34,iw=w-L-Rm,ih=h-T-B;
+  const gMin=Math.min(0,...cumG),gMax=Math.max(1,...cumG),nMax=Math.max(1,...cumNF)*1.15;
+  const X=i=>L+(n===1?iw/2:i*iw/(n-1)),YG=v=>T+ih-(v-gMin)/(gMax-gMin||1)*ih,YN=v=>T+ih-v/nMax*ih;
+  ctx.strokeStyle=COL.line;ctx.lineWidth=1;ctx.font="10px "+css("--mono");
+  for(let k=0;k<=4;k++){const y=T+ih*k/4;ctx.beginPath();ctx.moveTo(L,y);ctx.lineTo(L+iw,y);ctx.stroke();
+    ctx.fillStyle=COL.blue;ctx.textAlign="right";ctx.fillText(fx(gMax-(gMax-gMin)*k/4,0),L-6,y+3);
+    ctx.fillStyle=COL.acc;ctx.textAlign="left";ctx.fillText(fx(nMax-nMax*k/4,1),L+iw+6,y+3)}
+  const line=(arr,Y,col)=>{ctx.strokeStyle=col;ctx.lineWidth=2.2;ctx.shadowColor=col;ctx.shadowBlur=8;ctx.beginPath();arr.forEach((v,i)=>i?ctx.lineTo(X(i),Y(v)):ctx.moveTo(X(i),Y(v)));ctx.stroke();ctx.shadowBlur=0;
+    arr.forEach((v,i)=>{ctx.fillStyle=col;ctx.beginPath();ctx.arc(X(i),Y(v),3.2,0,TAU);ctx.fill()})};
+  line(cumG,YG,COL.blue);line(cumNF,YN,COL.acc);
+  ctx.fillStyle=COL.dim;ctx.textAlign="center";
+  names.forEach((nm,i)=>{let t=String(nm);if(t.length>9)t=t.slice(0,8)+"…";ctx.fillText(t,X(i),h-B+16)});
+  ctx.textAlign="left";ctx.fillStyle=COL.blue;ctx.fillText("● gain dB",L,h-4);ctx.fillStyle=COL.acc;ctx.fillText("● NF dB",L+80,h-4);
+}
+bind("cbw",S.cas,"bw",calcCas);bind("cbu",S.cas,"bu",calcCas);bind("csnr",S.cas,"snr",calcCas);
+drawers.cas=drawCas;
+
+/* ================= LINK ================= */
+const LK=["pt","gt","lt","f","fu","d","du","gr","lr","x","sens","fm"];
+let linkData=null;
+function calcLink(){
+  const l={};LK.forEach(k=>l[k]=num(S.link[k]));
+  const fM=l.f*l.fu,dk=l.d*l.du;
+  if(!(fM>0)||!(dk>0)||LK.some(k=>!isFinite(l[k]))){$("#lout").innerHTML=`<div class="empty">Fill every field. Frequency and distance must be &gt; 0.</div>`;$("#lstat").innerHTML="";linkData=null;drawLink();return}
+  const fspl=20*LOG(dk)+20*LOG(fM)+32.44;
+  const prx=l.pt+l.gt-l.lt-fspl-l.x+l.gr-l.lr,margin=prx-l.sens;
+  const eirp=l.pt+l.gt-l.lt,plmax=eirp+l.gr-l.lr-l.x-(l.sens+l.fm);
+  const dmax=Math.pow(10,(plmax-32.44-20*LOG(fM))/20);
+  const lam=299.792458/fM,fres=17.32*Math.sqrt(dk/(4*fM/1000));
+  const cls=margin>=l.fm?"ok":margin>=0?"warn":"bad";
+  const msg={ok:["Link closes","Margin covers the fade allowance you asked for."],warn:["Marginal","Above sensitivity, but less fade margin than you wanted."],bad:["Link fails","Received power is below the receiver's sensitivity."]}[cls];
+  $("#lstat").innerHTML=`<div class="status ${cls}"><div class="dot"></div><div><b>${msg[0]} · ${margin>=0?"+":""}${fx(margin,1)} dB</b><span>${msg[1]}</span></div></div>`;
+  const[dv,du]=si(dmax*1000,"m",3);
+  $("#lout").innerHTML=cell("Rx power",fx(prx,1),"dBm",cls==="ok"?"hi":cls==="warn"?"am":"rd")+cell("Path loss",fx(fspl,1),"dB")+cell("EIRP",fx(eirp,1),"dBm")+
+    cell("Max range*",dv,du,"am")+cellSI("Wavelength",lam,"m","",3)+cellSI("Fresnel r (mid)",fres,"m","",3);
+  linkData={l,fspl,prx};drawLink();
+}
+function drawLink(){
+  const c=$("#lchart");if(!c.offsetParent)return;const{ctx,w,h}=fit(c);ctx.clearRect(0,0,w,h);if(!linkData)return;
+  const{l,fspl,prx}=linkData;
+  const steps=[["Tx",l.pt,1],["Tx ant",l.gt],["Tx loss",-l.lt],["Path",-fspl],["Extra",-l.x],["Rx ant",l.gr],["Rx loss",-l.lr],["Rx",prx,1]];
+  let lv=0;const bars=steps.map(([n,v,abs])=>{if(abs){const b={n,a:Math.min(v,0)<v?null:null,lo:null,hi:null,v,abs:1};lv=v;return b}const a=lv;lv+=v;return{n,a,b:lv,v}});
+  const all=[l.sens,l.sens+l.fm,0];bars.forEach(b=>{if(b.abs)all.push(b.v);else all.push(b.a,b.b)});
+  let lo=Math.min(...all),hi=Math.max(...all);const pad=(hi-lo)*.1+2;lo-=pad;hi+=pad;
+  const L=40,Rm=8,T=18,B=26,iw=w-L-Rm,ih=h-T-B,Y=v=>T+(hi-v)/(hi-lo)*ih,bw=iw/bars.length;
+  ctx.font="10px "+css("--mono");ctx.strokeStyle=COL.line;ctx.lineWidth=1;
+  const step=Math.max(10,Math.ceil((hi-lo)/5/10)*10);
+  for(let v=Math.ceil(lo/step)*step;v<=hi;v+=step){const y=Y(v);ctx.beginPath();ctx.moveTo(L,y);ctx.lineTo(L+iw,y);ctx.stroke();ctx.fillStyle=COL.faint;ctx.textAlign="right";ctx.fillText(v,L-6,y+3)}
+  // sensitivity lines
+  const hl=(v,col,txt)=>{const y=Y(v);ctx.setLineDash([5,4]);ctx.strokeStyle=col;ctx.lineWidth=1.2;ctx.beginPath();ctx.moveTo(L,y);ctx.lineTo(L+iw,y);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle=col;ctx.textAlign="left";ctx.fillText(txt,L+4,y-4)};
+  hl(l.sens,COL.red,"sensitivity "+fx(l.sens,0));if(l.fm>0)hl(l.sens+l.fm,COL.amb,"+ fade margin");
+  bars.forEach((b,i)=>{const x=L+i*bw+bw*.18,ww=bw*.64;let y1,y2,col;
+    if(b.abs){y1=Y(b.v);y2=Y(lo);col=i===0?COL.blue:(b.v>=l.sens+l.fm?COL.acc:b.v>=l.sens?COL.amb:COL.red)}
+    else{y1=Y(Math.max(b.a,b.b));y2=Y(Math.min(b.a,b.b));col=b.v>=0?COL.acc:COL.red}
+    const g=ctx.createLinearGradient(0,y1,0,y2);g.addColorStop(0,col);g.addColorStop(1,col+"55");
+    ctx.fillStyle=g;ctx.globalAlpha=b.abs?.9:.85;const hh=Math.max(1.5,y2-y1);
+    ctx.beginPath();if(ctx.roundRect)ctx.roundRect(x,y1,ww,hh,3);else ctx.rect(x,y1,ww,hh);ctx.fill();ctx.globalAlpha=1;
+    if(!b.abs&&i<bars.length-1){ctx.strokeStyle=COL.faint;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x+ww,Y(b.b));ctx.lineTo(x+bw,Y(b.b));ctx.stroke()}
+    if(b.abs&&i===0){ctx.strokeStyle=COL.faint;ctx.beginPath();ctx.moveTo(x+ww,Y(b.v));ctx.lineTo(x+bw,Y(b.v));ctx.stroke()}
+    ctx.fillStyle=COL.ink;ctx.textAlign="center";
+    const lab=b.abs?fx(b.v,0):(b.v>=0?"+":"")+fx(b.v,b.n==="Path"?0:1);
+    if(!(b.n==="Extra"&&b.v===0))ctx.fillText(lab,x+ww/2,y1-5);
+    ctx.fillStyle=COL.dim;ctx.fillText(b.n,x+ww/2,h-B+15)});
+}
+LK.forEach(k=>bind("l"+k,S.link,k,calcLink));
+drawers.link=drawLink;
+
+/* ---------------- boot ---------------- */
+renderPower();renderMismatch();renderSmith();buildRows();calcCas();calcLink();
+setTab(S.tab in{conv:1,smith:1,cas:1,link:1}?S.tab:"conv");
+let rz;window.addEventListener("resize",()=>{clearTimeout(rz);rz=setTimeout(()=>{const d=drawers[S.tab];d&&d()},80)});
+})();
+</script>
+</body>
+</html>

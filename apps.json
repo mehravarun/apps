@@ -1,1 +1,30 @@
-[]
+[
+ {
+  "slug": "phasor",
+  "name": "PHASOR",
+  "tagline": "RF calculator kit: dBm converter, VSWR and return loss, interactive Smith chart, noise figure cascade and link budget",
+  "meta_description": "Free RF calculator: dBm/watts/volts converter, VSWR and return loss, interactive Smith chart with L-match solver, Friis noise cascade and link budget.",
+  "category": "Engineering",
+  "keywords": [
+   "dBm to watts",
+   "VSWR calculator",
+   "return loss",
+   "Smith chart",
+   "L network matching",
+   "noise figure cascade",
+   "Friis",
+   "link budget",
+   "free space path loss"
+  ],
+  "date": "2026-11-20",
+  "accent": "#3cf0a8",
+  "description": "PHASOR is a pocket toolkit for radio-frequency engineers, students and hobbyists. It brings together the calculations you reach for every day on the bench, and it runs entirely in your browser, with nothing to install and no sign-up.\n\nThe Convert tab turns any power or voltage (dBm, dBW, watts, Vrms, Vpk, Vpp, dBµV, dBmV) into all the others at the impedance you choose. Next to it, a mismatch converter moves between VSWR, return loss, reflection coefficient, S11, mismatch loss and reflected power, with a meter showing how much power actually reaches the load.\n\nThe Smith tab is an interactive Smith chart. Drag the load point around, or type its resistance and reactance, and PHASOR solves every two-element L-network that matches it to your system impedance. It gives real inductor and capacitor values at your frequency and draws each matching path on the chart.\n\nThe Cascade tab works out a receiver chain's total gain, noise figure (Friis), input and output IP3, sensitivity and spurious-free dynamic range. It also shows how much of the total noise each stage contributes. The Link tab builds a free-space link budget with a waterfall chart, fade margin, maximum range and Fresnel-zone radius. Your values are saved on your device.",
+  "how_to": [
+   "Pick a tab: Convert, Smith, Cascade or Link.",
+   "Type your values. Every result updates as you type.",
+   "On the Smith chart, drag the load point and tap a match solution to see its path.",
+   "Tap any result tile to copy its value.",
+   "Open the '?' notes under each panel for the formulas behind the numbers."
+  ]
+ }
+]
