@@ -79,5 +79,30 @@
    "Feed every mushroom to finish the board.",
    "Switch size, or press New for a random Wild board."
   ]
+ },
+ {
+  "slug": "lumen",
+  "name": "Lumen",
+  "tagline": "Laser and mirror puzzle: place mirrors to bend one beam through every crystal",
+  "meta_description": "Free laser mirror puzzle game in your browser. Place and flip mirrors to bend the beam through every crystal. Endless levels that grow harder, with hints.",
+  "category": "Games",
+  "keywords": [
+   "laser puzzle",
+   "mirror puzzle game",
+   "light reflection puzzle",
+   "logic puzzle",
+   "browser puzzle game",
+   "laser maze"
+  ],
+  "date": "2026-11-22",
+  "accent": "#ff4d6d",
+  "description": "Lumen is a laser-and-mirror logic puzzle. A laser fires into the board from the left edge, and somewhere on the grid sit one or more crystals. You have a limited number of mirrors. Place them so the beam bounces around the walls and passes through every crystal, and the crystals light up.\n\nTap an empty square to drop a mirror, tap again to flip its angle, and tap a third time to remove it. The beam redraws instantly as you go, so you can experiment freely. Walls stop the light, and the counter shows how many mirrors you have left. Any route that lights every crystal counts, so there's often more than one way to solve a board.\n\nLevels start on a small 5×5 board with a single crystal and grow to 9×9 boards with several crystals and more bends. Stuck? Hint locks one correct mirror in place for you. Your progress is saved on your device, so you can come back and carry on. Lumen works on phones and desktops, supports light and dark mode, and needs no account.",
+  "how_to": [
+   "Tap an empty square to place a mirror (╱).",
+   "Tap it again to flip it (╲), and once more to remove it.",
+   "Route the laser through every crystal using the mirrors you're given.",
+   "Use Hint to lock one correct mirror if you're stuck.",
+   "Solve the board to unlock the next, larger level."
+  ]
  }
 ]
