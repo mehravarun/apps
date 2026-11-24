@@ -36,6 +36,9 @@ def load():
         seen.add(s)
         if not (SRC / f"{s}.html").is_file():
             errors.append(f"missing src/{s}.html")
+        for doc in a.get("docs", []):
+            if not (doc.get("title") and doc.get("file")) or not (SRC / f"{s}-docs" / doc.get("file", "")).is_file():
+                errors.append(f"{s}: doc entry needs title + file present in src/{s}-docs/")
         try:
             datetime.strptime(a.get("date", ""), "%Y-%m-%d")
         except ValueError:
@@ -146,6 +149,11 @@ def app_page(site, a, apps):
     others = [o for o in apps if o["slug"] != slug]
     same = [o for o in others if o["category"] == a["category"]]
     more = (same + [o for o in others if o not in same])[:6]
+    docs = a.get("docs", [])
+    docs_html = ""
+    if docs:
+        items = "".join(f'<li><a href="{e(d["file"])}">{e(d["title"])}</a>' + (f' ({e(d["kind"])})' if d.get("kind") else "") + (f'<br><span style="color:var(--dim)">{e(d["blurb"])}</span>' if d.get("blurb") else "") + "</li>" for d in docs)
+        docs_html = f'<h2>Behind the app</h2><div class="prose"><ul style="padding-left:20px">{items}</ul></div>'
     more_html = f'<h2>More apps</h2><div class="grid">{"".join(card(site, o) for o in more)}</div>' if more else ""
     has_og = (OUT / slug / "og.png").exists()
     jsonld = {
@@ -167,6 +175,7 @@ def app_page(site, a, apps):
 <div class="prose">{paras}</div>
 <h2>How to use it</h2>
 <div class="prose"><ol>{steps}</ol></div>
+{docs_html}
 {more_html}
 </main>"""
     return page(site, title=title, desc=desc, path=f"/{slug}/", body=body, acc=accent(a),
@@ -246,6 +255,8 @@ def main():
         d = OUT / a["slug"]
         d.mkdir()
         shutil.copyfile(SRC / f"{a['slug']}.html", d / "app.html")
+        for doc in a.get("docs", []):
+            shutil.copyfile(SRC / f"{a['slug']}-docs" / doc["file"], d / doc["file"])
         og_image(a, site, d / "og.png")
     for a in apps:
         (OUT / a["slug"] / "index.html").write_text(app_page(site, a, apps))
@@ -257,6 +268,7 @@ def main():
         (OUT / "CNAME").write_text(site["custom_domain"].strip() + "\n")
     newest = apps[0]["date"] if apps else datetime.now(timezone.utc).strftime("%Y-%m-%d")
     urls = [(f"{base}/", newest)] + [(f"{base}/{a['slug']}/", a["date"]) for a in apps]
+    urls += [(f"{base}/{a['slug']}/{d['file']}", a["date"]) for a in apps for d in a.get("docs", [])]
     (OUT / "sitemap.xml").write_text('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
                                      + "".join(f"  <url><loc>{e(u)}</loc><lastmod>{d}</lastmod></url>\n" for u, d in urls) + "</urlset>\n")
     (OUT / "robots.txt").write_text(f"User-agent: *\nAllow: /\nSitemap: {base}/sitemap.xml\n")

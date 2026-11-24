@@ -29,6 +29,8 @@ A static site of self-contained HTML apps, published with GitHub Pages (branch `
 }
 ```
 
+   Optional: supporting documents. Put the files in `src/<slug>-docs/` and add `"docs": [{"title": "...", "file": "name.pdf", "kind": "PDF, 7 pages", "blurb": "one line"}]` to the entry. They're listed under "Behind the app" on the landing page.
+
 3. Run `python3 build.py`, then commit and push. The site updates in about a minute.
 
 ## Using a custom domain

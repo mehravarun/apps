@@ -129,6 +129,26 @@
    "Change mutation, plant growth or mating range, then press Reset to compare.",
    "Switch on seasons or the genome layer for more complex runs.",
    "Set a seed to repeat a run, and use Copy log as CSV to export data."
+  ],
+  "docs": [
+   {
+    "title": "Learning evolution: ideas and ways of thinking",
+    "file": "learning-evolution.pdf",
+    "kind": "PDF, 7 pages",
+    "blurb": "A plain-language primer on evolution, genes and good experimental habits, with examples from this simulator. No biology background needed."
+   },
+   {
+    "title": "How the sim evolved and what we observed",
+    "file": "how-it-evolved.pdf",
+    "kind": "PDF, 11 pages",
+    "blurb": "The build diary: eight versions, from one blob species to emergent species and hunters, with the experiments and lessons at each stage."
+   },
+   {
+    "title": "Design and handoff notes for developers",
+    "file": "coding-agent-handoff.pdf",
+    "kind": "PDF, 28 pages",
+    "blurb": "The technical design: the physics, the genome, what's designed versus evolved, and the roadmap."
+   }
   ]
  },
  {
