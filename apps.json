@@ -155,5 +155,56 @@
    "On Track, tap +1 to count or Start/Stop to time a session.",
    "Open History to see totals by period and edit any entry."
   ]
+ },
+ {
+  "slug": "tincture",
+  "name": "Tincture",
+  "tagline": "Colour palette generator built on OKLCH, with harmonies, tonal ramps, a WCAG contrast checker and colour-blind previews",
+  "meta_description": "Free OKLCH colour palette generator: harmonies, 50–950 tonal ramps, WCAG contrast grid, colour-blind simulation and CSS/JSON export. Runs in your browser.",
+  "category": "Design",
+  "keywords": [
+   "color palette generator",
+   "OKLCH color picker",
+   "WCAG contrast checker",
+   "color blind simulator",
+   "tailwind color scale",
+   "color harmony",
+   "design tokens"
+  ],
+  "date": "2026-11-23",
+  "accent": "#c2410c",
+  "description": "Tincture is a colour-palette studio for designers and front-end developers. It's built on OKLCH, a perceptual colour space where equal steps in lightness actually look equal to the eye. That makes it much easier to build palettes that feel balanced and accessible than working in HSL or hex.\n\nPick a base colour on the hue disc (hue around the edge, chroma outward), choose a harmony such as complementary, triadic or analogous, and Tincture builds a matching palette. Shuffle to explore and lock the swatches you want to keep. For every colour it generates a full 50 to 950 tonal ramp, like the scales used in Tailwind and modern design systems, spaced evenly in perceived lightness.\n\nA contrast grid shows the WCAG 2 ratio for every text-on-background pair, marked AAA, AA or large-text only, so you can see at a glance which combinations are readable. Colour-blind previews simulate how the palette looks with common types of colour vision deficiency. An in-use preview applies the palette to light and dark surfaces. When you're happy, copy the palette as CSS custom properties or JSON. Everything runs locally in your browser.",
+  "how_to": [
+   "Drag on the hue disc or set L, C and H to choose a base colour.",
+   "Pick a harmony, then press Shuffle (or Space) to explore. Lock swatches with 1–5.",
+   "Check the tonal ramps and the WCAG contrast grid for readable pairs.",
+   "Turn on a colour-blind preview to test accessibility.",
+   "Copy the result as CSS variables or JSON from Export."
+  ]
+ },
+ {
+  "slug": "orbiscribe",
+  "name": "Orbiscribe",
+  "tagline": "Draw any shape and watch a chain of spinning circles redraw it: Fourier series epicycles, live",
+  "meta_description": "Interactive Fourier series epicycles drawing toy. Draw any closed shape and watch rotating circles (a discrete Fourier transform) trace it back. Free, in your browser.",
+  "category": "Math",
+  "keywords": [
+   "Fourier series epicycles",
+   "Fourier transform visualization",
+   "draw with circles",
+   "epicycle drawing",
+   "DFT visualizer",
+   "math animation"
+  ],
+  "date": "2026-11-24",
+  "accent": "#7c5cff",
+  "description": "Orbiscribe turns any drawing into a chain of spinning circles. Trace a closed shape with your finger or mouse, and Orbiscribe breaks it down with a discrete Fourier transform into circles, each turning at a whole-number speed. Joined tip to tail, they spin together, and the end of the chain redraws your shape.\n\nIt's one of the most beautiful ways to see what a Fourier series really does. With only a few circles you get a rough, wobbly outline. As you add more, the tip hugs your line ever more closely, because each extra circle adds a finer level of detail. The largest circles always come first, and a spectrum view shows how much each frequency contributes.\n\nNot in the mood to draw? Try the built-in shapes: a heart, a star, a trefoil, a square or the π symbol. You can change the number of circles and the speed, show or hide the circles and the original drawing, and pause to study a single moment. It's a great classroom demo for Fourier analysis, signal processing or complex numbers, and a mesmerising toy for anyone else.",
+  "how_to": [
+   "Draw one continuous closed shape on the canvas, or pick a preset shape.",
+   "Watch the spinning circles redraw it.",
+   "Use the Circles slider to add or remove circles and see the fit change.",
+   "Adjust Speed, and toggle the circles or the original line.",
+   "Check the Spectrum to see how strong each frequency is."
+  ]
  }
 ]
