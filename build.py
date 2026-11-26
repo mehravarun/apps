@@ -170,7 +170,7 @@ def app_page(site, a, apps):
 <p class="lede">{e(a['tagline'])}</p>
 <div class="meta"><span class="chip">{e(a['category'])}</span><span>Published {e(a['date'])}</span><span>Free · No sign-up · Works offline once loaded</span></div>
 <div class="btns"><a class="btn main" href="app.html">Open full screen ↗</a><a class="btn" href="{e(base)}/">Browse all apps</a></div>
-<div class="frame"><iframe src="app.html" title="{e(a['name'])}" loading="lazy" allow="fullscreen; clipboard-write; autoplay"></iframe></div>
+<div class="frame"><iframe src="app.html" title="{e(a['name'])}" loading="lazy" allow="fullscreen; clipboard-write; autoplay; geolocation"></iframe></div>
 <h2>About {e(a['name'])}</h2>
 <div class="prose">{paras}</div>
 <h2>How to use it</h2>

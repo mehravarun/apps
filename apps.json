@@ -226,5 +226,58 @@
    "Adjust Speed, and toggle the circles or the original line.",
    "Check the Spectrum to see how strong each frequency is."
   ]
+ },
+ {
+  "slug": "heliograph",
+  "name": "Heliograph",
+  "tagline": "Sun path and daylight explorer: sunrise, sunset, golden hour, blue hour and shadow length for any place and day",
+  "meta_description": "Free sun path calculator: sunrise, sunset, golden and blue hour, sun altitude, shadow length and a year-long daylight map for any location and date.",
+  "category": "Science",
+  "keywords": [
+   "sun path calculator",
+   "sunrise sunset times",
+   "golden hour calculator",
+   "blue hour",
+   "sun position",
+   "shadow length calculator",
+   "daylight hours",
+   "solar elevation"
+  ],
+  "date": "2026-11-25",
+  "accent": "#f59e0b",
+  "description": "Heliograph shows where the sun is in the sky for any place on Earth, on any day of the year. Use your location or enter one, and it draws the sun's path across the sky, its height above the horizon through the day, and the exact times of sunrise, sunset and solar noon.\n\nIt's built for photographers, gardeners, architects and the simply curious. Golden hour and blue hour are marked so you can plan a shoot. The shadow-length readout tells you how long the shadow of a pole or building will be at any moment, which helps with garden beds, solar panels and room lighting. Civil, nautical and astronomical twilight are shown too, for stargazers.\n\nThe year view is a daylight map: every day of the year on one chart, coloured by high sun, golden hour, twilight and night. You can see at a glance how day length changes through the seasons. Tap or drag on it to jump to any day and time, or press Play to animate the sun across a day. All calculations run in your browser using standard solar-position formulas, and your location is never sent anywhere.",
+  "how_to": [
+   "Press Locate to use your location, or set a place.",
+   "Pick a day and drag the time to move the sun.",
+   "Read sunrise, sunset, golden hour and shadow length.",
+   "Press Play day to animate the sun's path.",
+   "Tap the year map to jump to any day and time."
+  ]
+ },
+ {
+  "slug": "dahdit",
+  "name": "Dahdit",
+  "tagline": "Learn Morse code by ear: a tappable telegraph key, a Koch-method trainer, a translator and a sounding chart",
+  "meta_description": "Free Morse code trainer and translator. Learn by ear with the Koch method, tap a telegraph key that decodes your sending, and translate text to Morse audio.",
+  "category": "Learning",
+  "keywords": [
+   "learn Morse code",
+   "Morse code trainer",
+   "Morse code translator",
+   "Koch method",
+   "Farnsworth timing",
+   "Morse code audio",
+   "ham radio CW practice"
+  ],
+  "date": "2026-11-26",
+  "accent": "#e85d3c",
+  "description": "Dahdit is a complete Morse code toolkit that teaches you to hear code, not count dots. It's named after the rhythm of the letter D: dah-di-dit.\n\nThe Learn tab uses the Koch method, the approach many radio amateurs swear by. You start with just two characters played at full speed, tap the letter you heard, and a new character is added each time you reach 90% accuracy. Farnsworth timing lets you keep each character fast while adding extra space between them, so you learn the sound of letters rather than counting beeps.\n\nThe Key tab turns your screen (or the space bar) into a telegraph key. Tap for a dit, hold for a dah, and Dahdit decodes what you send in real time, adapting to your speed and showing your WPM. The Translate tab turns any text into Morse code and plays it as audio, and the Chart tab lets you tap any character to hear it. You can set character speed, effective speed, tone pitch and volume. It follows the international Morse standard (ITU-R M.1677) and runs entirely in your browser.",
+  "how_to": [
+   "Open Learn and press Start, then tap the letter you heard.",
+   "Reach 90% accuracy to unlock the next character.",
+   "Use Key to practise sending: tap for a dit, hold for a dah.",
+   "Type text in Translate and press Play to hear it.",
+   "Adjust speed, tone and volume in Settings."
+  ]
  }
 ]

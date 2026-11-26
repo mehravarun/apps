@@ -1,0 +1,365 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Dahdit</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Layout: a telegraph operator's bench. Brass key and lamp, cream paper tape, verdigris-green desk. One column, tabbed stations. */
+:root{
+  --desk:#11302c; --desk2:#173d38; --felt:#0b2421; --brass:#d6a64b; --brass2:#f0cd7c;
+  --tape:#efe4c8; --ink:#2a2118; --muted:#8fb1a8; --ok:#7fd49a; --bad:#ff8a70; --lamp:#ffb347;
+  --display:"Rockwell","Roboto Slab","Iowan Old Style","Palatino Linotype",Georgia,serif;
+  --body:"Avenir Next","Segoe UI",system-ui,-apple-system,sans-serif;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{min-height:100%}
+body{margin:0;background:var(--desk);color:var(--tape);font:15px/1.5 var(--body);
+  background-image:radial-gradient(ellipse at 50% -10%,#1e4a44 0,transparent 60%),repeating-linear-gradient(90deg,rgba(255,255,255,.012) 0 2px,transparent 2px 7px);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:14px 32px;-webkit-tap-highlight-color:transparent}
+.wrap{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+header{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.brand{display:flex;align-items:baseline;gap:10px;flex:1;min-width:0}
+h1{font:700 2rem/1 var(--display);margin:0;color:var(--brass2);letter-spacing:.02em}
+.brand small{font:12px var(--mono);color:var(--muted);letter-spacing:.12em;white-space:nowrap}
+.lamp{width:30px;height:30px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#5a4a30,#2a2216);border:3px solid var(--brass);box-shadow:inset 0 0 6px #000;transition:background .03s,box-shadow .03s;flex:none}
+.lamp.on{background:radial-gradient(circle at 35% 30%,#fff6d8,var(--lamp) 55%,#c56a10);box-shadow:0 0 22px 6px rgba(255,179,71,.55),inset 0 0 4px #fff}
+nav{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;background:var(--felt);padding:4px;border-radius:12px;border:1px solid #24504a}
+nav button{font:600 13px var(--body);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);background:none;border:0;border-radius:9px;padding:10px 4px;cursor:pointer}
+nav button[aria-selected="true"]{background:var(--desk2);color:var(--brass2);box-shadow:inset 0 0 0 1px #3a6a62}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--brass2);outline-offset:2px}
+details.set{background:var(--felt);border:1px solid #24504a;border-radius:12px;padding:0 14px}
+details.set summary{cursor:pointer;padding:10px 0;font:12px var(--mono);color:var(--muted);letter-spacing:.08em;list-style:none}
+details.set summary::-webkit-details-marker{display:none}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;padding-bottom:14px}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--muted)}
+label.f b{color:var(--tape);font:600 14px var(--mono)}
+input[type=range]{width:100%;accent-color:var(--brass)}
+.panel{display:flex;flex-direction:column;gap:14px}
+.tape{background:var(--tape);color:var(--ink);border-radius:4px;min-height:58px;padding:12px 14px;position:relative;overflow:hidden;
+  box-shadow:0 2px 0 #b9a985,0 8px 20px rgba(0,0,0,.35);
+  background-image:repeating-linear-gradient(90deg,transparent 0 22px,rgba(120,90,40,.10) 22px 23px);
+  display:flex;flex-wrap:wrap;align-items:center;gap:4px 14px}
+.tape::before,.tape::after{content:"";position:absolute;top:0;bottom:0;width:7px;background:radial-gradient(circle,var(--desk) 2.5px,transparent 3px) 0 0/7px 11px repeat-y}
+.tape::before{left:2px}.tape::after{right:2px}
+.ch{display:inline-flex;flex-direction:column;align-items:center;gap:2px;transition:color .1s}
+.ch .sy{display:flex;gap:3px;align-items:center;height:12px}
+.ch .lt{font:700 13px var(--mono)}
+.d{width:8px;height:8px;border-radius:50%;background:currentColor}
+.h{width:22px;height:8px;border-radius:4px;background:currentColor}
+.ch.hot{color:#c0391b}
+.ws{width:10px}
+.out{font:600 clamp(22px,5vw,30px)/1.3 var(--mono);letter-spacing:.08em;color:var(--tape);min-height:2.6em;word-break:break-word;background:var(--felt);border-radius:12px;padding:12px 16px;border:1px solid #24504a}
+.out .cur{display:inline-block;width:.55em;height:1em;background:var(--brass);vertical-align:-.12em;animation:bl 1s steps(1) infinite}
+@keyframes bl{50%{opacity:0}}
+.keybed{display:flex;flex-direction:column;align-items:center;gap:10px;padding:18px 0 6px}
+.key{width:min(58vw,200px);aspect-ratio:1;border-radius:50%;border:0;cursor:pointer;touch-action:none;user-select:none;-webkit-user-select:none;
+  background:radial-gradient(circle at 38% 30%,#3a3a3a,#141414 62%,#000);box-shadow:0 0 0 8px var(--brass),0 0 0 11px #6d5321,0 16px 0 6px #08201d,0 22px 40px rgba(0,0,0,.6);
+  color:var(--brass2);font:700 15px var(--display);letter-spacing:.2em;transition:transform .04s,box-shadow .04s}
+.key.down{transform:translateY(7px);box-shadow:0 0 0 8px var(--brass2),0 0 0 11px #6d5321,0 9px 0 6px #08201d,0 12px 24px rgba(0,0,0,.6)}
+.hint{font-size:12px;color:var(--muted);text-align:center}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.btn{font:600 13px var(--body);border-radius:10px;border:1px solid #3a6a62;background:var(--desk2);color:var(--tape);padding:10px 14px;cursor:pointer;min-height:42px}
+.btn.pri{background:var(--brass);color:#2a1d08;border-color:var(--brass2)}
+.btn:active{transform:translateY(1px)}
+.btn:disabled{opacity:.4;cursor:default}
+.stat{font:12px var(--mono);color:var(--muted)}
+.stat b{color:var(--brass2);font-weight:600}
+.spacer{flex:1}
+/* learn */
+.card{display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:center;background:var(--felt);border:1px solid #24504a;border-radius:14px;padding:16px}
+.big{width:96px;height:96px;border-radius:14px;background:var(--tape);color:var(--ink);display:grid;place-items:center;font:700 52px var(--display);box-shadow:0 3px 0 #b9a985}
+.big.ok{background:#d6f3dc;color:#1d5a2c}.big.bad{background:#ffd9cf;color:#8c2410}
+.msg{font-size:14px;min-width:0}
+.msg .code{margin-top:6px}
+.meter{height:8px;border-radius:4px;background:#0a1d1b;overflow:hidden}
+.meter i{display:block;height:100%;background:linear-gradient(90deg,var(--brass),var(--ok));width:0;transition:width .3s}
+.keys{display:grid;grid-template-columns:repeat(auto-fill,minmax(52px,1fr));gap:6px}
+.keys button{font:700 20px var(--mono);min-height:52px;border-radius:10px;border:1px solid #3a6a62;background:var(--desk2);color:var(--tape);cursor:pointer;position:relative}
+.keys button .acc{position:absolute;left:6px;right:6px;bottom:5px;height:3px;border-radius:2px;background:#0a1d1b;overflow:hidden}
+.keys button .acc i{display:block;height:100%;background:var(--ok)}
+.keys button.new{border-color:var(--brass)}
+.keys button.flash-ok{background:#25563a}.keys button.flash-bad{background:#5a2a20}
+.lvlup{color:var(--ok);font-size:13px}
+/* translate */
+textarea{width:100%;min-height:84px;resize:vertical;border-radius:12px;border:1px solid #3a6a62;background:var(--felt);color:var(--tape);font:16px/1.5 var(--mono);padding:12px}
+.lbl{font:12px var(--mono);letter-spacing:.1em;color:var(--muted);text-transform:uppercase}
+/* chart */
+.chart{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
+.chart button{display:flex;flex-direction:column;align-items:flex-start;gap:6px;padding:10px 12px;border-radius:10px;background:var(--tape);color:var(--ink);border:0;cursor:pointer;box-shadow:0 2px 0 #b9a985;text-align:left}
+.chart button b{font:700 22px var(--display)}
+.chart button .sy{display:flex;gap:3px;height:10px;align-items:center}
+.chart button.hot{background:var(--lamp)}
+.chart h3{grid-column:1/-1;margin:8px 0 0;font:600 12px var(--mono);letter-spacing:.12em;color:var(--muted);text-transform:uppercase}
+footer{font-size:12px;color:var(--muted);text-align:center;padding-top:6px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="brand"><h1>Dahdit</h1><small>−·· ·− ···· −·· ·· −</small></div>
+    <div class="lamp" id="lamp" aria-hidden="true"></div>
+  </header>
+
+  <nav role="tablist">
+    <button role="tab" data-t="key" aria-selected="true">Key</button>
+    <button role="tab" data-t="learn" aria-selected="false">Learn</button>
+    <button role="tab" data-t="xlate" aria-selected="false">Translate</button>
+    <button role="tab" data-t="chart" aria-selected="false">Chart</button>
+  </nav>
+
+  <details class="set" id="setbox">
+    <summary>⚙ SETTINGS · <span id="sumtxt"></span></summary>
+    <div class="grid2">
+      <label class="f">Character speed <b><span id="cv"></span> WPM</b><input id="cw" type="range" min="5" max="40" step="1"></label>
+      <label class="f">Effective speed (Farnsworth) <b><span id="ev"></span> WPM</b><input id="ew" type="range" min="3" max="40" step="1"></label>
+      <label class="f">Tone <b><span id="tv"></span> Hz</b><input id="tone" type="range" min="400" max="1000" step="10"></label>
+      <label class="f">Volume <b><span id="vv"></span>%</b><input id="vol" type="range" min="0" max="100" step="1"></label>
+    </div>
+  </details>
+
+  <!-- KEY -->
+  <section class="panel" id="p-key">
+    <div class="tape" id="ktape"></div>
+    <div class="out" id="kout"><span class="cur"></span></div>
+    <div class="keybed">
+      <button class="key" id="key" aria-label="Telegraph key">KEY</button>
+      <div class="hint">Tap for a dit, hold for a dah. On a keyboard, use the space bar.</div>
+    </div>
+    <div class="row">
+      <span class="stat">Your speed <b id="kwpm">–</b> WPM</span>
+      <label class="stat"><input type="checkbox" id="adapt" checked> follow my rhythm</label>
+      <span class="spacer"></span>
+      <button class="btn" id="kback">⌫</button>
+      <button class="btn" id="kclear">Clear</button>
+      <button class="btn" id="kplay">Play back</button>
+    </div>
+  </section>
+
+  <!-- LEARN -->
+  <section class="panel" id="p-learn" hidden>
+    <div class="card">
+      <div class="big" id="lbig">?</div>
+      <div class="msg"><div id="lmsg">Press <b>Start</b>, listen to the sound, then tap the letter you heard. Learn by ear, not by counting dots.</div><div class="code" id="lcode"></div></div>
+    </div>
+    <div class="row">
+      <button class="btn pri" id="lstart">Start</button>
+      <button class="btn" id="lreplay">Replay</button>
+      <span class="spacer"></span>
+      <button class="btn" id="ldown">−</button>
+      <span class="stat">Lesson <b id="llvl">2</b> · <b id="lcount">2</b> characters</span>
+      <button class="btn" id="lup">+</button>
+    </div>
+    <div>
+      <div class="row" style="justify-content:space-between"><span class="stat">Last 20 answers <b id="lacc">–</b></span><span class="lvlup" id="lnote"></span></div>
+      <div class="meter"><i id="lbar"></i></div>
+    </div>
+    <div class="keys" id="lkeys"></div>
+    <div class="hint">Koch method: start with two characters at full speed and add one each time you reach 90% accuracy.</div>
+  </section>
+
+  <!-- TRANSLATE -->
+  <section class="panel" id="p-xlate" hidden>
+    <span class="lbl">Text</span>
+    <textarea id="xtext" spellcheck="false">CQ CQ DE DAHDIT K</textarea>
+    <span class="lbl">Morse</span>
+    <textarea id="xmorse" spellcheck="false"></textarea>
+    <div class="tape" id="xtape"></div>
+    <div class="row">
+      <button class="btn pri" id="xplay">▶ Play</button>
+      <button class="btn" id="xstop">■ Stop</button>
+      <button class="btn" id="xcopy">Copy Morse</button>
+      <span class="spacer"></span>
+      <span class="stat" id="xdur"></span>
+    </div>
+  </section>
+
+  <!-- CHART -->
+  <section class="panel" id="p-chart" hidden>
+    <div class="chart" id="chart"></div>
+  </section>
+
+  <footer>International Morse code (ITU-R M.1677). 1 WPM = the word PARIS, 50 dit-lengths, sent once a minute.</footer>
+</div>
+
+<script>
+"use strict";
+const MORSE={A:".-",B:"-...",C:"-.-.",D:"-..",E:".",F:"..-.",G:"--.",H:"....",I:"..",J:".---",K:"-.-",L:".-..",M:"--",N:"-.",O:"---",P:".--.",Q:"--.-",R:".-.",S:"...",T:"-",U:"..-",V:"...-",W:".--",X:"-..-",Y:"-.--",Z:"--..",
+"0":"-----","1":".----","2":"..---","3":"...--","4":"....-","5":".....","6":"-....","7":"--...","8":"---..","9":"----.",
+".":".-.-.-",",":"--..--","?":"..--..","/":"-..-.","=":"-...-","'":".----.","!":"-.-.--","(":"-.--.",")":"-.--.-","&":".-...",":":"---...",";":"-.-.-.","+":".-.-.","-":"-....-",'"':".-..-.","@":".--.-."};
+const REV={};for(const k in MORSE)REV[MORSE[k]]=k;
+const KOCH="KMURESNAPTLWI.JZ=FOY,VG5/Q92H38B?47C1D60X".split("");
+const $=id=>document.getElementById(id);
+const store={get(k,d){try{const v=localStorage.getItem("dahdit:"+k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem("dahdit:"+k,JSON.stringify(v))}catch(e){}}};
+
+/* ---------- settings ---------- */
+const S=Object.assign({cw:20,ew:12,tone:620,vol:60,tab:"key",level:2},store.get("s",{}));
+function saveS(){store.set("s",S)}
+function bindRange(id,key,out){const el=$(id);el.value=S[key];const upd=()=>{S[key]=+el.value;if(key==="cw"&&S.ew>S.cw){S.ew=S.cw;$("ew").value=S.ew}if(key==="ew"&&S.ew>S.cw){S.cw=S.ew;$("cw").value=S.cw}refreshS();saveS()};el.addEventListener("input",upd)}
+function refreshS(){$("cv").textContent=S.cw;$("ev").textContent=S.ew;$("tv").textContent=S.tone;$("vv").textContent=S.vol;
+  $("sumtxt").textContent=S.cw+(S.ew<S.cw?"/"+S.ew:"")+" WPM · "+S.tone+" Hz";if(master)master.gain.value=S.vol/100*0.5;}
+bindRange("cw","cw");bindRange("ew","ew");bindRange("tone","tone");bindRange("vol","vol");
+
+/* ---------- timing ---------- */
+function timeline(text,c,s){
+  const u=1.2/c;let cg=3*u,wg=7*u;
+  if(s<c){const ta=(60*c-37.2*s)/(s*c);cg=3*ta/19;wg=7*ta/19}
+  const marks=[];let t=0,idx=0,any=false;
+  const words=text.toUpperCase().split(/\s+/).filter(Boolean);
+  words.forEach((w,wi)=>{
+    if(wi>0&&any)t+=wg-cg;
+    [...w].forEach(ch=>{const code=MORSE[ch];if(code){any=true;
+      for(let i=0;i<code.length;i++){const d=code[i]==="."?u:3*u;marks.push({t,d,i:idx});t+=d+(i<code.length-1?u:0)}
+      t+=cg;}idx++;});
+    idx++;
+  });
+  return{marks,total:Math.max(0,t-cg)};
+}
+
+/* ---------- audio ---------- */
+let ac=null,master=null,play=null,liveOn=false;
+function audio(){
+  if(!ac){const AC=window.AudioContext||window.webkitAudioContext;if(!AC)return null;ac=new AC();master=ac.createGain();master.gain.value=S.vol/100*0.5;master.connect(ac.destination)}
+  if(ac.state==="suspended")ac.resume();return ac;
+}
+const RAMP=0.005;
+function stopPlay(){if(play){try{play.osc.stop()}catch(e){}play.gain.disconnect();const cb=play.onend;play=null;cb&&cb(true)}}
+function playText(text,opts={}){
+  const a=audio();if(!a)return;stopPlay();
+  const tl=timeline(text,opts.c||S.cw,opts.s||S.ew);if(!tl.marks.length)return;
+  const osc=a.createOscillator(),g=a.createGain();osc.frequency.value=S.tone;g.gain.value=0;osc.connect(g);g.connect(master);
+  const t0=a.currentTime+0.06;
+  for(const m of tl.marks){g.gain.setValueAtTime(0,t0+m.t);g.gain.linearRampToValueAtTime(1,t0+m.t+RAMP);g.gain.setValueAtTime(1,t0+m.t+m.d-RAMP);g.gain.linearRampToValueAtTime(0,t0+m.t+m.d)}
+  osc.start(t0);osc.stop(t0+tl.total+0.05);
+  play={osc,gain:g,t0,marks:tl.marks,end:t0+tl.total,onend:opts.onend,onchar:opts.onchar,last:-1};
+  osc.onended=()=>{if(play&&play.osc===osc){const cb=play.onend;play=null;cb&&cb(false)}};
+}
+let liveOsc=null,liveGain=null;
+function liveStart(){const a=audio();if(!a)return;liveOn=true;const o=a.createOscillator(),g=a.createGain();o.frequency.value=S.tone;g.gain.setValueAtTime(0,a.currentTime);g.gain.linearRampToValueAtTime(1,a.currentTime+RAMP);o.connect(g);g.connect(master);o.start();liveOsc=o;liveGain=g}
+function liveStop(){liveOn=false;if(!liveOsc||!ac)return;const t=ac.currentTime;liveGain.gain.cancelScheduledValues(t);liveGain.gain.setValueAtTime(liveGain.gain.value,t);liveGain.gain.linearRampToValueAtTime(0,t+RAMP);liveOsc.stop(t+RAMP+0.01);liveOsc=null}
+const lamp=$("lamp");
+(function loop(){
+  let on=liveOn;
+  if(play&&ac){const t=ac.currentTime-play.t0;let cur=-1;
+    for(const m of play.marks){if(t>=m.t&&t<m.t+m.d){on=true}if(t>=m.t)cur=m.i;else break}
+    if(cur!==play.last){play.last=cur;play.onchar&&play.onchar(cur)}}
+  lamp.classList.toggle("on",on);requestAnimationFrame(loop);
+})();
+
+/* ---------- tape rendering ---------- */
+function symHTML(code){return [...code].map(s=>s==="."?'<i class="d"></i>':'<i class="h"></i>').join("")}
+function tapeHTML(text,withIdx){let out="",idx=0;
+  for(const ch of text.toUpperCase()){if(/\s/.test(ch)){out+='<span class="ws"></span>';idx++;continue}
+    const c=MORSE[ch];out+=c?`<span class="ch"${withIdx?` data-i="${idx}"`:""}><span class="sy">${symHTML(c)}</span><span class="lt">${ch.replace(/[<&"]/g,x=>({"<":"&lt;","&":"&amp;",'"':"&quot;"})[x])}</span></span>`:"";idx++}
+  return out}
+function encode(text){return text.toUpperCase().split(/\s+/).filter(Boolean).map(w=>[...w].map(c=>MORSE[c]).filter(Boolean).join(" ")).filter(Boolean).join(" / ")}
+function decode(m){return m.replace(/[·•∙*]/g,".").replace(/[—–_−]/g,"-").trim().split(/\s*\/\s*|\s{3,}|\n+/).map(w=>w.trim().split(/\s+/).filter(Boolean).map(c=>REV[c]||"#").join("")).join(" ")}
+
+/* ---------- tabs ---------- */
+const tabs=[...document.querySelectorAll("nav button")];
+function show(t){S.tab=t;saveS();tabs.forEach(b=>b.setAttribute("aria-selected",b.dataset.t===t));
+  ["key","learn","xlate","chart"].forEach(p=>$("p-"+p).hidden=p!==t);stopPlay();}
+tabs.forEach(b=>b.addEventListener("click",()=>show(b.dataset.t)));
+
+/* ---------- KEY ---------- */
+const K={sent:"",sym:"",unit:1200/S.cw,downAt:0,timer:null,timer2:null,dits:[]};
+const keyEl=$("key");
+function renderKey(){
+  const t=K.sent.slice(-28);
+  $("ktape").innerHTML=tapeHTML(t,false)+(K.sym?`<span class="ch hot"><span class="sy">${symHTML(K.sym)}</span><span class="lt">…</span></span>`:"")||'<span class="stat" style="color:#7a6a50">Your keying prints here</span>';
+  $("kout").innerHTML=K.sent.replace(/[<&]/g,x=>x==="<"?"&lt;":"&amp;")+'<span class="cur"></span>';
+  $("kwpm").textContent=Math.round(1200/K.unit);
+}
+function keyDown(){if(K.isDown)return;K.isDown=true;clearTimeout(K.timer);clearTimeout(K.timer2);stopPlay();K.downAt=performance.now();keyEl.classList.add("down");liveStart()}
+function keyUp(){if(!K.isDown)return;K.isDown=false;keyEl.classList.remove("down");liveStop();
+  const d=performance.now()-K.downAt;const u=$("adapt").checked?K.unit:1200/S.cw;
+  const isDit=d<2*u;K.sym+=isDit?".":"-";
+  if($("adapt").checked){const est=isDit?d:d/3;K.unit=Math.min(260,Math.max(30,K.unit*0.8+est*0.2))}
+  if(K.sym.length>7)K.sym=K.sym.slice(-7);
+  const uu=$("adapt").checked?K.unit:1200/S.cw;
+  K.timer=setTimeout(()=>{K.sent+=REV[K.sym]||"#";K.sym="";renderKey()},2.5*uu);
+  K.timer2=setTimeout(()=>{if(K.sent&&!K.sent.endsWith(" "))K.sent+=" ";renderKey()},6*uu);
+  renderKey();
+}
+keyEl.addEventListener("pointerdown",e=>{e.preventDefault();try{keyEl.setPointerCapture(e.pointerId)}catch(_){}keyDown()});
+keyEl.addEventListener("pointerup",keyUp);keyEl.addEventListener("pointercancel",keyUp);keyEl.addEventListener("lostpointercapture",keyUp);
+keyEl.addEventListener("contextmenu",e=>e.preventDefault());
+keyEl.addEventListener("keydown",e=>{if(e.key===" "||e.key==="Enter")e.preventDefault()});
+document.addEventListener("keydown",e=>{
+  const tag=(document.activeElement&&document.activeElement.tagName)||"";if(tag==="TEXTAREA"||tag==="INPUT"&&document.activeElement.type!=="range"&&document.activeElement.type!=="checkbox")return;
+  if(S.tab==="key"&&e.code==="Space"){e.preventDefault();if(!e.repeat)keyDown()}
+  if(S.tab==="learn"&&!e.ctrlKey&&!e.metaKey&&e.key.length===1){const ch=e.key.toUpperCase();if(L.set.includes(ch)){e.preventDefault();answer(ch)}}
+  if(S.tab==="learn"&&e.key==="Enter"){e.preventDefault();L.cur?playText(L.cur,{s:S.cw}):next()}
+});
+document.addEventListener("keyup",e=>{if(S.tab==="key"&&e.code==="Space"){e.preventDefault();keyUp()}});
+window.addEventListener("blur",()=>{keyUp()});
+$("kclear").onclick=()=>{K.sent="";K.sym="";renderKey()};
+$("kback").onclick=()=>{if(K.sym)K.sym="";else K.sent=K.sent.replace(/ $/,"").slice(0,-1);renderKey()};
+$("kplay").onclick=()=>{const t=K.sent.trim();if(t)playText(t.replace(/#/g,""))};
+
+/* ---------- LEARN (Koch) ---------- */
+const L={stats:store.get("stats",{}),recent:store.get("recent",[]),cur:null,set:[],locked:false};
+function lvlSet(){S.level=Math.max(2,Math.min(KOCH.length,S.level));L.set=KOCH.slice(0,S.level)}
+function accOf(ch){const h=L.stats[ch]||[];return h.length?h.reduce((a,b)=>a+b,0)/h.length:null}
+function renderLearn(){
+  lvlSet();$("llvl").textContent=S.level-1;$("lcount").textContent=S.level;
+  const box=$("lkeys");box.innerHTML="";
+  L.set.forEach((ch,i)=>{const b=document.createElement("button");b.dataset.ch=ch;b.className=i===L.set.length-1?"new":"";
+    const a=accOf(ch);b.innerHTML=`${ch}<span class="acc"><i style="width:${a==null?0:Math.round(a*100)}%"></i></span>`;
+    b.setAttribute("aria-label","Answer "+ch);b.onclick=()=>answer(ch);box.appendChild(b)});
+  const r=L.recent,acc=r.length?r.reduce((a,b)=>a+b,0)/r.length:0;
+  $("lacc").textContent=r.length?Math.round(acc*100)+"% of "+r.length:"–";$("lbar").style.width=(acc*100)+"%";
+  const ready=r.length>=20&&acc>=0.9&&S.level<KOCH.length;
+  $("lnote").textContent=ready?"90% reached. Press + to add “"+KOCH[S.level]+"”.":"";
+  $("lup").classList.toggle("pri",ready);
+}
+function pick(){const newest=L.set[L.set.length-1];let tot=0;
+  const w=L.set.map(ch=>{const a=accOf(ch);let x=1+(a==null?1.5:(1-a)*3)+(ch===newest?1.5:0);if(ch===L.cur)x*=0.35;tot+=x;return x});
+  let r=Math.random()*tot;for(let i=0;i<w.length;i++){r-=w[i];if(r<=0)return L.set[i]}return L.set[0]}
+function next(){L.locked=false;L.cur=pick();const big=$("lbig");big.className="big";big.textContent="?";$("lcode").innerHTML="";
+  $("lmsg").textContent="Listen…";$("lstart").textContent="Skip";playText(L.cur,{s:S.cw,onend:()=>{if(!L.locked)$("lmsg").textContent="Which character was that?"}})}
+function answer(ch){
+  if(!L.cur){next();return}if(L.locked)return;L.locked=true;
+  const ok=ch===L.cur,big=$("lbig");
+  (L.stats[L.cur]=L.stats[L.cur]||[]).push(ok?1:0);if(L.stats[L.cur].length>10)L.stats[L.cur].shift();
+  L.recent.push(ok?1:0);if(L.recent.length>20)L.recent.shift();store.set("stats",L.stats);store.set("recent",L.recent);
+  big.textContent=L.cur;big.className="big "+(ok?"ok":"bad");
+  $("lcode").innerHTML=`<span class="tape" style="min-height:0;padding:8px 14px;display:inline-flex">${tapeHTML(L.cur,false)}</span>`;
+  $("lmsg").innerHTML=ok?"Correct.":`You tapped <b>${ch}</b>. It was <b>${L.cur}</b>.`;
+  const btn=[...document.querySelectorAll("#lkeys button")].find(b=>b.dataset.ch===ch);
+  renderLearn();const btn2=[...document.querySelectorAll("#lkeys button")].find(b=>b.dataset.ch===ch);
+  if(btn2){btn2.classList.add(ok?"flash-ok":"flash-bad");setTimeout(()=>btn2.classList.remove("flash-ok","flash-bad"),350)}
+  if(ok)setTimeout(next,650);else{playText(L.cur,{s:S.cw});setTimeout(next,1900)}
+}
+$("lstart").onclick=()=>next();
+$("lreplay").onclick=()=>{if(L.cur)playText(L.cur,{s:S.cw})};
+$("lup").onclick=()=>{S.level++;L.recent=[];store.set("recent",L.recent);saveS();renderLearn();
+  const nc=KOCH[S.level-1];$("lbig").className="big";$("lbig").textContent=nc;L.cur=null;$("lstart").textContent="Start";
+  $("lmsg").innerHTML=`New character <b>${nc}</b>. This is how it sounds.`;$("lcode").innerHTML=`<span class="tape" style="min-height:0;padding:8px 14px;display:inline-flex">${tapeHTML(nc,false)}</span>`;
+  playText(nc+" "+nc+" "+nc,{s:S.cw})};
+$("ldown").onclick=()=>{S.level--;L.recent=[];store.set("recent",L.recent);saveS();L.cur=null;$("lstart").textContent="Start";renderLearn()};
+
+/* ---------- TRANSLATE ---------- */
+const xt=$("xtext"),xm=$("xmorse");
+function fromText(){xm.value=encode(xt.value);renderX()}
+function fromMorse(){xt.value=decode(xm.value);renderX()}
+function renderX(){$("xtape").innerHTML=tapeHTML(xt.value,true)||'<span class="stat" style="color:#7a6a50">Type above</span>';
+  const tl=timeline(xt.value,S.cw,S.ew);$("xdur").textContent=tl.marks.length?tl.total.toFixed(1)+" s at "+S.cw+(S.ew<S.cw?"/"+S.ew:"")+" WPM":""}
+xt.addEventListener("input",fromText);xm.addEventListener("input",fromMorse);
+$("xplay").onclick=()=>{const chs=[...document.querySelectorAll("#xtape .ch")];
+  playText(xt.value,{onchar:i=>chs.forEach(c=>c.classList.toggle("hot",+c.dataset.i===i)),onend:()=>chs.forEach(c=>c.classList.remove("hot"))})};
+$("xstop").onclick=stopPlay;
+$("xcopy").onclick=()=>{const v=xm.value;const done=()=>{$("xcopy").textContent="Copied";setTimeout(()=>$("xcopy").textContent="Copy Morse",1200)};
+  try{navigator.clipboard.writeText(v).then(done,()=>{xm.focus();xm.select()})}catch(e){xm.focus();xm.select()}};
+
+/* ---------- CHART ---------- */
+(function(){const box=$("chart");const groups=[["Letters","ABCDEFGHIJKLMNOPQRSTUVWXYZ"],["Numbers","1234567890"],["Punctuation",".,?/=+-'!():;&\"@"]];
+  for(const [name,chars] of groups){const h=document.createElement("h3");h.textContent=name;box.appendChild(h);
+    for(const ch of chars){const b=document.createElement("button");b.innerHTML=`<b>${ch.replace(/[<&"]/g,x=>({"<":"&lt;","&":"&amp;",'"':"&quot;"})[x])}</b><span class="sy">${symHTML(MORSE[ch])}</span>`;
+      b.setAttribute("aria-label",ch+" "+MORSE[ch].replace(/\./g,"dit ").replace(/-/g,"dah "));
+      b.onclick=()=>{box.querySelectorAll(".hot").forEach(x=>x.classList.remove("hot"));b.classList.add("hot");playText(ch,{s:S.cw,onend:()=>b.classList.remove("hot")})};box.appendChild(b)}}})();
+
+/* ---------- boot ---------- */
+refreshS();K.sent="SOS ";renderKey();fromText();renderLearn();show(["key","learn","xlate","chart"].includes(S.tab)?S.tab:"key");
+</script>
+
+</body></html>

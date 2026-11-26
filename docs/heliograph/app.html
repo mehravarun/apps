@@ -1,0 +1,463 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Heliograph — Sun Path & Daylight Explorer</title>
+<style>
+:root{
+  --bg:#0a0e1c; --panel:#111830; --panel2:#0d1328; --line:#24305a; --ink:#e9e4d6; --dim:#8f94ad;
+  --sun:#ffb547; --sun2:#ffd98a; --blue:#6f8cff; --rose:#ff7a5c;
+  --serif:"Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+  --mono:ui-monospace,"SF Mono",Menlo,Consolas,"Roboto Mono",monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-text-size-adjust:100%}
+body{
+  background:radial-gradient(1200px 600px at 80% -10%,#2a1d2e 0%,transparent 60%),radial-gradient(900px 500px at -10% 110%,#13224a 0%,transparent 60%),var(--bg);
+  min-height:100vh;
+  padding:max(14px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) max(18px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left));
+}
+.wrap{max-width:1180px;margin:0 auto}
+header{display:flex;flex-wrap:wrap;align-items:flex-end;gap:12px 20px;justify-content:space-between;margin-bottom:14px}
+.brand{display:flex;align-items:center;gap:12px}
+.brand svg{flex:none}
+h1{font-family:var(--serif);font-weight:600;font-size:clamp(26px,4vw,36px);letter-spacing:.06em;margin:0;line-height:1}
+.sub{color:var(--dim);font-size:13px;margin-top:4px;letter-spacing:.02em}
+.loc{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+select,input,button{font:inherit;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 10px;min-height:38px}
+select:focus,input:focus,button:focus-visible{outline:2px solid var(--sun);outline-offset:1px}
+button{cursor:pointer;transition:background .15s,border-color .15s}
+button:hover{border-color:var(--sun)}
+button.pri{background:linear-gradient(180deg,#ffc469,#f29a3a);color:#2a1606;border-color:#ffb547;font-weight:600}
+input[type=number]{width:96px;font-family:var(--mono);font-size:14px}
+.custom{display:none;gap:8px;align-items:center}
+.custom.on{display:flex}
+.grid{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:14px}
+@media (max-width:820px){.grid{grid-template-columns:1fr}}
+.card{background:linear-gradient(180deg,var(--panel),var(--panel2));border:1px solid var(--line);border-radius:18px;padding:14px;position:relative;overflow:hidden}
+.card h2{font-family:var(--serif);font-weight:600;font-size:15px;letter-spacing:.12em;text-transform:uppercase;color:var(--sun2);margin:0 0 10px;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.card h2 small{font-family:system-ui,sans-serif;text-transform:none;letter-spacing:0;color:var(--dim);font-weight:400;font-size:12px}
+canvas{display:block;width:100%;touch-action:none}
+#polar{aspect-ratio:1/1;max-height:560px}
+#curve{height:190px}
+#year{height:230px;cursor:crosshair;border-radius:10px}
+.right{display:flex;flex-direction:column;gap:14px}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+@media (max-width:420px){.stats{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.stat{background:#0a1024;border:1px solid #1c2650;border-radius:12px;padding:9px 10px}
+.stat .k{font-size:11px;color:var(--dim);letter-spacing:.06em;text-transform:uppercase}
+.stat .v{font-family:var(--mono);font-size:18px;margin-top:3px;white-space:nowrap}
+.stat .v.big{color:var(--sun)}
+.stat .s{font-size:11px;color:var(--dim);margin-top:2px;font-family:var(--mono)}
+.controls{display:grid;grid-template-columns:auto 1fr auto;gap:10px 12px;align-items:center;margin-top:12px}
+.controls label{font-size:12px;color:var(--dim);letter-spacing:.06em;text-transform:uppercase}
+.controls .val{font-family:var(--mono);font-size:14px;min-width:92px;text-align:right}
+input[type=range]{-webkit-appearance:none;appearance:none;background:transparent;border:0;padding:0;min-height:32px;width:100%}
+input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:6px;background:linear-gradient(90deg,#1b2d5e,#f29a4a 30%,#ffe7a6 50%,#f29a4a 70%,#1b2d5e)}
+input[type=range]::-moz-range-track{height:6px;border-radius:6px;background:linear-gradient(90deg,#1b2d5e,#f29a4a 30%,#ffe7a6 50%,#f29a4a 70%,#1b2d5e)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:24px;height:24px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#fff3cf,#ffb547 60%,#d0761f);margin-top:-9px;box-shadow:0 0 12px #ffb54799;border:0}
+input[type=range]::-moz-range-thumb{width:24px;height:24px;border-radius:50%;background:radial-gradient(circle at 40% 35%,#fff3cf,#ffb547 60%,#d0761f);box-shadow:0 0 12px #ffb54799;border:0}
+#dayR::-webkit-slider-runnable-track{background:linear-gradient(90deg,#3a4f8f,#ffb547 50%,#3a4f8f)}
+#dayR::-moz-range-track{background:linear-gradient(90deg,#3a4f8f,#ffb547 50%,#3a4f8f)}
+.btns{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.btns button{flex:1 1 auto}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;font-size:12px;color:var(--dim)}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:5px}
+.note{font-size:12px;color:var(--dim);margin-top:8px;line-height:1.45}
+.yearcard{margin-top:14px}
+.tag{font-family:var(--mono);font-size:12px;color:var(--dim)}
+.polarinfo{margin-top:8px;font-family:var(--mono);font-size:12px;color:var(--dim);text-align:center}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <svg width="44" height="44" viewBox="0 0 44 44" aria-hidden="true"><defs><radialGradient id="g" cx=".4" cy=".35"><stop offset="0" stop-color="#fff3cf"/><stop offset=".6" stop-color="#ffb547"/><stop offset="1" stop-color="#c8621a"/></radialGradient></defs><circle cx="22" cy="22" r="20" fill="none" stroke="#3a4f8f" stroke-width="1.5"/><path d="M4 26 Q22 2 40 26" fill="none" stroke="#ffb547" stroke-width="1.6" stroke-dasharray="2 3"/><circle cx="22" cy="12" r="6" fill="url(#g)"/><line x1="2" y1="26" x2="42" y2="26" stroke="#8f94ad" stroke-width="1"/></svg>
+      <div>
+        <h1>HELIOGRAPH</h1>
+        <div class="sub">Sun path, daylight &amp; shadow explorer — any place, any day</div>
+      </div>
+    </div>
+    <div class="loc">
+      <select id="city" aria-label="Location"></select>
+      <span class="custom" id="custom">
+        <input id="lat" type="number" step="0.01" min="-90" max="90" aria-label="Latitude" placeholder="lat">
+        <input id="lon" type="number" step="0.01" min="-180" max="180" aria-label="Longitude" placeholder="lon">
+      </span>
+      <button id="geo" title="Use device location">⌖ Locate</button>
+    </div>
+  </header>
+
+  <div class="grid">
+    <div class="card">
+      <h2>Sun path <small id="placeTag"></small></h2>
+      <canvas id="polar"></canvas>
+      <div class="polarinfo" id="polarInfo"></div>
+    </div>
+    <div class="right">
+      <div class="card">
+        <h2>The day <small id="dateTag"></small></h2>
+        <div class="stats" id="stats"></div>
+      </div>
+      <div class="card">
+        <h2>Altitude over the day <small>degrees above horizon</small></h2>
+        <canvas id="curve"></canvas>
+        <div class="controls">
+          <label for="timeR">Time</label><input id="timeR" type="range" min="0" max="1439" step="1"><div class="val" id="timeV"></div>
+          <label for="dayR">Day</label><input id="dayR" type="range" min="1" max="365" step="1"><div class="val" id="dayV"></div>
+        </div>
+        <div class="btns">
+          <button id="play" class="pri">▶ Play day</button>
+          <button id="now">Now</button>
+          <button id="prev">◀ Day</button>
+          <button id="next">Day ▶</button>
+          <input id="dateI" type="date" aria-label="Date" style="flex:1 1 140px">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card yearcard">
+    <h2>The whole year <small>tap or drag to choose a day &amp; time</small></h2>
+    <canvas id="year"></canvas>
+    <div class="legend">
+      <span><i style="background:#ffe7a6"></i>High sun</span>
+      <span><i style="background:#f29a4a"></i>Golden hour</span>
+      <span><i style="background:#4a5fb0"></i>Civil twilight / blue hour</span>
+      <span><i style="background:#1b2d5e"></i>Nautical</span>
+      <span><i style="background:#0f1a3a"></i>Astronomical</span>
+      <span><i style="background:#060a16;border:1px solid #24305a"></i>Night</span>
+    </div>
+    <div class="note" id="yearNote"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+var D2R=Math.PI/180, R2D=180/Math.PI;
+var CITIES=[
+["Reykjavík",64.15,-21.94,"Atlantic/Reykjavik"],["Tromsø",69.65,18.96,"Europe/Oslo"],["Longyearbyen",78.22,15.65,"Arctic/Longyearbyen"],
+["London",51.507,-0.128,"Europe/London"],["Paris",48.857,2.352,"Europe/Paris"],["Berlin",52.52,13.405,"Europe/Berlin"],
+["Madrid",40.417,-3.704,"Europe/Madrid"],["Rome",41.9,12.5,"Europe/Rome"],["Istanbul",41.01,28.98,"Europe/Istanbul"],
+["Moscow",55.756,37.617,"Europe/Moscow"],["Cairo",30.044,31.236,"Africa/Cairo"],["Lagos",6.524,3.379,"Africa/Lagos"],
+["Nairobi",-1.286,36.817,"Africa/Nairobi"],["Cape Town",-33.925,18.424,"Africa/Johannesburg"],["Dubai",25.205,55.27,"Asia/Dubai"],
+["Mumbai",19.076,72.878,"Asia/Kolkata"],["Delhi",28.614,77.209,"Asia/Kolkata"],["Bengaluru",12.972,77.595,"Asia/Kolkata"],
+["Bangkok",13.756,100.502,"Asia/Bangkok"],["Singapore",1.352,103.82,"Asia/Singapore"],["Shanghai",31.23,121.474,"Asia/Shanghai"],
+["Tokyo",35.676,139.65,"Asia/Tokyo"],["Sydney",-33.869,151.209,"Australia/Sydney"],["Auckland",-36.848,174.763,"Pacific/Auckland"],
+["Honolulu",21.307,-157.858,"Pacific/Honolulu"],["Anchorage",61.218,-149.9,"America/Anchorage"],["Vancouver",49.283,-123.121,"America/Vancouver"],
+["San Francisco",37.775,-122.419,"America/Los_Angeles"],["Denver",39.739,-104.99,"America/Denver"],["Mexico City",19.433,-99.133,"America/Mexico_City"],
+["Chicago",41.878,-87.63,"America/Chicago"],["New York",40.713,-74.006,"America/New_York"],["São Paulo",-23.55,-46.633,"America/Sao_Paulo"],
+["Buenos Aires",-34.604,-58.382,"America/Argentina/Buenos_Aires"],["Ushuaia",-54.8,-68.3,"America/Argentina/Ushuaia"],["McMurdo Station",-77.85,166.67,"Antarctica/McMurdo"]
+];
+var deviceTZ=null; try{deviceTZ=Intl.DateTimeFormat().resolvedOptions().timeZone||null;}catch(e){}
+
+/* ---------- solar math (NOAA) ---------- */
+function solar(ms,lat,lon){
+  var jd=ms/86400000+2440587.5, T=(jd-2451545)/36525;
+  var L0=((280.46646+T*(36000.76983+T*0.0003032))%360+360)%360;
+  var M=357.52911+T*(35999.05029-0.0001537*T);
+  var e=0.016708634-T*(0.000042037+0.0000001267*T);
+  var Mr=M*D2R;
+  var C=Math.sin(Mr)*(1.914602-T*(0.004817+0.000014*T))+Math.sin(2*Mr)*(0.019993-0.000101*T)+Math.sin(3*Mr)*0.000289;
+  var om=(125.04-1934.136*T)*D2R;
+  var lam=(L0+C-0.00569-0.00478*Math.sin(om))*D2R;
+  var eps0=23+(26+(21.448-T*(46.815+T*(0.00059-T*0.001813)))/60)/60;
+  var eps=(eps0+0.00256*Math.cos(om))*D2R;
+  var dec=Math.asin(Math.sin(eps)*Math.sin(lam));
+  var y=Math.tan(eps/2);y*=y;
+  var L0r=L0*D2R;
+  var eot=4*R2D*(y*Math.sin(2*L0r)-2*e*Math.sin(Mr)+4*e*y*Math.sin(Mr)*Math.cos(2*L0r)-0.5*y*y*Math.sin(4*L0r)-1.25*e*e*Math.sin(2*Mr));
+  var dayMin=((ms/60000)%1440+1440)%1440;
+  var tst=dayMin+eot+4*lon;
+  var ha=(tst/4-180)*D2R;
+  var la=lat*D2R;
+  var cz=Math.sin(la)*Math.sin(dec)+Math.cos(la)*Math.cos(dec)*Math.cos(ha);
+  cz=Math.max(-1,Math.min(1,cz));
+  var alt=90-Math.acos(cz)*R2D;
+  var az=(Math.atan2(Math.sin(ha),Math.cos(ha)*Math.sin(la)-Math.tan(dec)*Math.cos(la))*R2D+180+360)%360;
+  return {alt:alt,az:az,dec:dec*R2D,eot:eot};
+}
+function altAt(ms){return solar(ms,S.lat,S.lon).alt;}
+
+/* ---------- time zones ---------- */
+var fmtCache={};
+function tzOffset(ms){
+  if(!S.tz) return -new Date(ms).getTimezoneOffset();
+  var f=fmtCache[S.tz];
+  if(!f){try{f=fmtCache[S.tz]=new Intl.DateTimeFormat("en-US",{timeZone:S.tz,hourCycle:"h23",year:"numeric",month:"numeric",day:"numeric",hour:"numeric",minute:"numeric",second:"numeric"});}catch(e){S.tz=null;return -new Date(ms).getTimezoneOffset();}}
+  var p={};f.formatToParts(new Date(ms)).forEach(function(x){p[x.type]=x.value;});
+  var h=+p.hour%24;
+  var u=Date.UTC(+p.year,+p.month-1,+p.day,h,+p.minute,+p.second);
+  return Math.round((u-Math.floor(ms/1000)*1000)/60000);
+}
+function localToUtc(y,m,d,min){
+  var g=Date.UTC(y,m,d)+min*60000, o=tzOffset(g), u=g-o*60000, o2=tzOffset(u);
+  if(o2!==o)u=g-o2*60000;
+  return u;
+}
+function pad(n){return (n<10?"0":"")+n;}
+function localParts(ms){var t=new Date(ms+tzOffset(ms)*60000);return {y:t.getUTCFullYear(),m:t.getUTCMonth(),d:t.getUTCDate(),h:t.getUTCHours(),mi:t.getUTCMinutes()};}
+function fmtTime(ms){if(ms==null)return "—";var p=localParts(ms);return pad(p.h)+":"+pad(p.mi);}
+function fmtDur(min){if(min==null)return "—";var h=Math.floor(min/60),m=Math.round(min-h*60);if(m===60){h++;m=0;}return h+"h "+pad(m)+"m";}
+var MONTHS=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+function isLeap(y){return (y%4===0&&y%100!==0)||y%400===0;}
+function daysIn(y){return isLeap(y)?366:365;}
+function doyToMD(y,doy){var t=new Date(Date.UTC(y,0,doy));return {m:t.getUTCMonth(),d:t.getUTCDate()};}
+function mdToDoy(y,m,d){return Math.round((Date.UTC(y,m,d)-Date.UTC(y,0,1))/86400000)+1;}
+
+/* ---------- state ---------- */
+var S={lat:51.507,lon:-0.128,tz:"Europe/London",name:"London",year:2026,doy:1,minute:720,playing:false};
+
+/* ---------- day analysis ---------- */
+function analyseDay(y,doy){
+  var md=doyToMD(y,doy);
+  var t0=localToUtc(y,md.m,md.d,0), t1=localToUtc(y,md.m,md.d+1,0);
+  var N=288, step=(t1-t0)/N, ts=[], al=[];
+  for(var i=0;i<=N;i++){var t=t0+i*step;ts.push(t);al.push(altAt(t));}
+  function cross(th){
+    var ups=[],downs=[];
+    for(var i=0;i<N;i++){
+      var a=al[i]-th,b=al[i+1]-th;
+      if((a<0&&b>=0)||(a>=0&&b<0)){
+        var lo=ts[i],hi=ts[i+1],flo=a;
+        for(var k=0;k<22;k++){var mid=(lo+hi)/2,fm=altAt(mid)-th;if((fm<0)===(flo<0)){lo=mid;flo=fm;}else hi=mid;}
+        (a<0?ups:downs).push((lo+hi)/2);
+      }
+    }
+    return {up:ups[0]!=null?ups[0]:null,down:downs.length?downs[downs.length-1]:null};
+  }
+  var mi=0;for(var j=1;j<=N;j++)if(al[j]>al[mi])mi=j;
+  var lo=ts[Math.max(0,mi-1)],hi=ts[Math.min(N,mi+1)];
+  for(var k=0;k<40;k++){var a=lo+(hi-lo)/3,b=hi-(hi-lo)/3;if(altAt(a)<altAt(b))lo=a;else hi=b;}
+  var noon=(lo+hi)/2;
+  var rs=cross(-0.833),civ=cross(-6),nau=cross(-12),ast=cross(-18),gold=cross(6),blue=cross(-4);
+  var dayMin=0,maxA=-90,minA=90;
+  for(var q=0;q<N;q++){if((al[q]+al[q+1])/2>-0.833)dayMin+=step/60000;}
+  al.forEach(function(v){if(v>maxA)maxA=v;if(v<minA)minA=v;});
+  return {t0:t0,t1:t1,ts:ts,al:al,noon:noon,noonAlt:altAt(noon),rs:rs,civ:civ,nau:nau,ast:ast,gold:gold,blue:blue,dayMin:dayMin,maxA:maxA,minA:minA};
+}
+
+/* ---------- canvases ---------- */
+var polar=document.getElementById("polar"),curve=document.getElementById("curve"),year=document.getElementById("year");
+function fit(c){var r=c.getBoundingClientRect(),dpr=Math.min(window.devicePixelRatio||1,2.5);var w=Math.max(1,Math.round(r.width*dpr)),h=Math.max(1,Math.round(r.height*dpr));if(c.width!==w||c.height!==h){c.width=w;c.height=h;}var x=c.getContext("2d");x.setTransform(dpr,0,0,dpr,0,0);return {x:x,w:r.width,h:r.height};}
+
+function altColor(a){
+  // returns [r,g,b]
+  var stops=[[-90,[5,8,18]],[-18,[6,10,22]],[-17.9,[15,26,58]],[-12,[18,30,64]],[-11.9,[27,45,94]],[-6,[34,52,110]],[-5.9,[60,82,160]],[-4,[74,95,176]],[-3.9,[160,90,120]],[-0.833,[200,105,95]],[0,[232,130,72]],[6,[242,170,90]],[6.1,[248,196,120]],[25,[255,222,150]],[60,[255,240,190]],[90,[255,248,220]]];
+  for(var i=1;i<stops.length;i++){if(a<=stops[i][0]){var s0=stops[i-1],s1=stops[i],t=(a-s0[0])/(s1[0]-s0[0]);return [s0[1][0]+(s1[1][0]-s0[1][0])*t,s0[1][1]+(s1[1][1]-s0[1][1])*t,s0[1][2]+(s1[1][2]-s0[1][2])*t];}}
+  return stops[stops.length-1][1];
+}
+
+var DAY=null, yearImg=null, yearKey="";
+function curTime(){return DAY.t0+S.minute*60000*((DAY.t1-DAY.t0)/86400000);}
+
+function drawPolar(){
+  var f=fit(polar),x=f.x,w=f.w,h=f.h,cx=w/2,cy=h/2,R=Math.min(w,h)/2-26;
+  x.clearRect(0,0,w,h);
+  var g=x.createRadialGradient(cx,cy,0,cx,cy,R);g.addColorStop(0,"#1d2a58");g.addColorStop(1,"#0c1430");
+  var t=curTime(),sp=solar(t,S.lat,S.lon);
+  x.fillStyle=g;x.beginPath();x.arc(cx,cy,R,0,7);x.fill();
+  if(sp.alt>-6){x.globalAlpha=Math.min(1,(sp.alt+6)/20)*0.55;var g2=x.createRadialGradient(cx,cy,0,cx,cy,R);g2.addColorStop(0,"#ffd98a");g2.addColorStop(1,"#5b6fb0");x.fillStyle=g2;x.beginPath();x.arc(cx,cy,R,0,7);x.fill();x.globalAlpha=1;}
+  x.strokeStyle="rgba(143,148,173,.25)";x.lineWidth=1;x.font="11px "+getComputedStyle(document.body).fontFamily;
+  for(var a=15;a<90;a+=15){x.beginPath();x.arc(cx,cy,R*(90-a)/90,0,7);x.stroke();}
+  for(var az=0;az<360;az+=30){var s=Math.sin(az*D2R),c=Math.cos(az*D2R);x.beginPath();x.moveTo(cx,cy);x.lineTo(cx+R*s,cy-R*c);x.stroke();}
+  x.strokeStyle="#8f94ad";x.lineWidth=1.5;x.beginPath();x.arc(cx,cy,R,0,7);x.stroke();
+  x.fillStyle="#8f94ad";x.textAlign="center";x.textBaseline="middle";
+  for(var a2=30;a2<90;a2+=30){x.fillText(a2+"°",cx+4,cy-R*(90-a2)/90-7);}
+  x.font="600 13px "+getComputedStyle(document.body).fontFamily;
+  [["N",0],["E",90],["S",180],["W",270]].forEach(function(p){var s=Math.sin(p[1]*D2R),c=Math.cos(p[1]*D2R);x.fillStyle=p[0]==="N"?"#ffd98a":"#c9c6bd";x.fillText(p[0],cx+(R+14)*s,cy-(R+14)*c);});
+  function P(alt,az){var r=R*(90-alt)/90;return [cx+r*Math.sin(az*D2R),cy-r*Math.cos(az*D2R)];}
+  function path(y,m,d,style,width,dash){
+    var t0=localToUtc(y,m,d,0),pts=[];
+    for(var i=0;i<=288;i++){var sp=solar(t0+i*300000,S.lat,S.lon);pts.push(sp.alt>=0?P(sp.alt,sp.az):null);}
+    x.strokeStyle=style;x.lineWidth=width;x.setLineDash(dash||[]);x.beginPath();var pen=false;
+    pts.forEach(function(p){if(!p){pen=false;return;}if(!pen){x.moveTo(p[0],p[1]);pen=true;}else x.lineTo(p[0],p[1]);});
+    x.stroke();x.setLineDash([]);
+  }
+  path(S.year,5,21,"rgba(255,122,92,.55)",1.4,[4,4]);
+  path(S.year,11,21,"rgba(111,140,255,.6)",1.4,[4,4]);
+  path(S.year,2,20,"rgba(201,198,189,.3)",1,[2,4]);
+  var md=doyToMD(S.year,S.doy);
+  x.shadowColor="#ffb547";x.shadowBlur=8;path(S.year,md.m,md.d,"#ffb547",2.6);x.shadowBlur=0;
+  // hour ticks
+  x.font="10px "+getComputedStyle(document.body).fontFamily;
+  for(var hh=0;hh<24;hh++){var tt=DAY.t0+hh*3600000,q=solar(tt,S.lat,S.lon);if(q.alt<1)continue;var p=P(q.alt,q.az);x.fillStyle="#fff3cf";x.beginPath();x.arc(p[0],p[1],2.4,0,7);x.fill();var lp=localParts(tt);var dx=p[0]-cx,dy=p[1]-cy,L=Math.hypot(dx,dy)||1;x.fillStyle="rgba(255,243,207,.8)";x.fillText(pad(lp.h),p[0]-dy/L*11,p[1]+dx/L*11);}
+  // sunrise/sunset azimuth markers
+  [DAY.rs.up,DAY.rs.down].forEach(function(tm,i){if(tm==null)return;var q=solar(tm,S.lat,S.lon),p=P(0,q.az);x.fillStyle=i?"#ff7a5c":"#ffd98a";x.beginPath();x.arc(p[0],p[1],4,0,7);x.fill();});
+  // shadow + gnomon
+  if(sp.alt>0){
+    var sl=Math.min(R*0.95,R*0.16/Math.tan(sp.alt*D2R)),sa=(sp.az+180)*D2R;
+    var ex=cx+sl*Math.sin(sa),ey=cy-sl*Math.cos(sa);
+    var lg=x.createLinearGradient(cx,cy,ex,ey);lg.addColorStop(0,"rgba(0,0,0,.65)");lg.addColorStop(1,"rgba(0,0,0,.05)");
+    x.strokeStyle=lg;x.lineWidth=6;x.lineCap="round";x.beginPath();x.moveTo(cx,cy);x.lineTo(ex,ey);x.stroke();x.lineCap="butt";
+  }
+  x.fillStyle="#e9e4d6";x.beginPath();x.arc(cx,cy,3.5,0,7);x.fill();
+  // sun
+  if(sp.alt>=0){
+    var p2=P(sp.alt,sp.az);var rg=x.createRadialGradient(p2[0],p2[1],0,p2[0],p2[1],26);rg.addColorStop(0,"rgba(255,230,160,.9)");rg.addColorStop(1,"rgba(255,181,71,0)");
+    x.fillStyle=rg;x.beginPath();x.arc(p2[0],p2[1],26,0,7);x.fill();
+    var rg2=x.createRadialGradient(p2[0]-2,p2[1]-2,0,p2[0],p2[1],9);rg2.addColorStop(0,"#fff6dc");rg2.addColorStop(.6,"#ffb547");rg2.addColorStop(1,"#d0761f");
+    x.fillStyle=rg2;x.beginPath();x.arc(p2[0],p2[1],9,0,7);x.fill();
+  } else {
+    var p3=P(0,sp.az);x.strokeStyle="#ffb547";x.lineWidth=1.5;x.setLineDash([2,2]);x.beginPath();x.arc(p3[0],p3[1],8,0,7);x.stroke();x.setLineDash([]);
+  }
+  document.getElementById("polarInfo").innerHTML='<span style="color:#ff7a5c">- -</span> Jun solstice &nbsp; <span style="color:#6f8cff">- -</span> Dec solstice &nbsp; <span style="color:#c9c6bd">··</span> equinox';
+}
+
+function drawCurve(){
+  var f=fit(curve),x=f.x,w=f.w,h=f.h,L=30,Rm=8,T=8,B=20,pw=w-L-Rm,ph=h-T-B;
+  x.clearRect(0,0,w,h);
+  var top=Math.max(30,Math.ceil((DAY.maxA+5)/15)*15),bot=Math.min(-20,Math.floor((DAY.minA)/10)*10);bot=Math.max(bot,-60);
+  function Y(a){return T+(top-a)/(top-bot)*ph;}
+  // background bands by altitude
+  for(var py=0;py<ph;py+=2){var a=top-(py/ph)*(top-bot);var c=altColor(a);x.fillStyle="rgba("+(c[0]|0)+","+(c[1]|0)+","+(c[2]|0)+","+(a>0?0.16:0.55)+")";x.fillRect(L,T+py,pw,2.2);}
+  x.strokeStyle="rgba(143,148,173,.22)";x.lineWidth=1;x.fillStyle="#8f94ad";x.font="10px "+getComputedStyle(document.body).fontFamily;x.textAlign="right";x.textBaseline="middle";
+  for(var a2=Math.ceil(bot/15)*15;a2<=top;a2+=15){var yy=Y(a2);x.beginPath();x.moveTo(L,yy);x.lineTo(L+pw,yy);x.stroke();x.fillText(a2+"°",L-4,yy);}
+  x.strokeStyle="rgba(233,228,214,.6)";x.beginPath();x.moveTo(L,Y(0));x.lineTo(L+pw,Y(0));x.stroke();
+  x.textAlign="center";x.textBaseline="top";
+  for(var hh=0;hh<=24;hh+=3){var xx=L+hh/24*pw;x.fillStyle="#8f94ad";x.fillText(pad(hh%24)+"h",xx,T+ph+5);x.strokeStyle="rgba(143,148,173,.12)";x.beginPath();x.moveTo(xx,T);x.lineTo(xx,T+ph);x.stroke();}
+  var N=DAY.ts.length-1;
+  x.beginPath();for(var i=0;i<=N;i++){var X=L+i/N*pw,YY=Y(DAY.al[i]);if(i)x.lineTo(X,YY);else x.moveTo(X,YY);}
+  x.lineTo(L+pw,Y(bot));x.lineTo(L,Y(bot));x.closePath();x.fillStyle="rgba(255,181,71,.08)";x.fill();
+  x.beginPath();for(var j=0;j<=N;j++){var X2=L+j/N*pw,Y2=Y(DAY.al[j]);if(j)x.lineTo(X2,Y2);else x.moveTo(X2,Y2);}
+  x.strokeStyle="#ffb547";x.lineWidth=2.2;x.shadowColor="#ffb547";x.shadowBlur=6;x.stroke();x.shadowBlur=0;
+  function tx(tm){return L+(tm-DAY.t0)/(DAY.t1-DAY.t0)*pw;}
+  [[DAY.rs.up,"#ffd98a"],[DAY.rs.down,"#ff7a5c"]].forEach(function(e){if(e[0]==null)return;x.fillStyle=e[1];x.beginPath();x.arc(tx(e[0]),Y(-0.833),3.5,0,7);x.fill();});
+  var ct=curTime(),ca=altAt(ct),cxp=tx(ct);
+  x.strokeStyle="rgba(255,243,207,.7)";x.lineWidth=1;x.setLineDash([3,3]);x.beginPath();x.moveTo(cxp,T);x.lineTo(cxp,T+ph);x.stroke();x.setLineDash([]);
+  x.fillStyle="#fff3cf";x.beginPath();x.arc(cxp,Math.max(T,Math.min(T+ph,Y(ca))),5,0,7);x.fill();
+}
+
+function buildYear(){
+  var key=S.lat+","+S.lon+","+S.tz+","+S.year;
+  if(key===yearKey&&yearImg)return;
+  yearKey=key;
+  var nd=daysIn(S.year),rows=144;
+  var cv=document.createElement("canvas");cv.width=nd;cv.height=rows;
+  var cx=cv.getContext("2d"),img=cx.createImageData(nd,rows),dl=[];
+  for(var d=1;d<=nd;d++){
+    var md=doyToMD(S.year,d),t0=localToUtc(S.year,md.m,md.d,0),t1=localToUtc(S.year,md.m,md.d+1,0),st=(t1-t0)/rows,cnt=0;
+    for(var r=0;r<rows;r++){var a=altAt(t0+(r+0.5)*st);if(a>-0.833)cnt++;var c=altColor(a),k=(r*nd+(d-1))*4;img.data[k]=c[0];img.data[k+1]=c[1];img.data[k+2]=c[2];img.data[k+3]=255;}
+    dl.push(cnt*(t1-t0)/rows/60000);
+  }
+  cx.putImageData(img,0,0);yearImg=cv;
+  var mx=0,mn=0;for(var i=1;i<nd;i++){if(dl[i]>dl[mx])mx=i;if(dl[i]<dl[mn])mn=i;}
+  var a=doyToMD(S.year,mx+1),b=doyToMD(S.year,mn+1);
+  document.getElementById("yearNote").textContent="Longest day around "+a.d+" "+MONTHS[a.m]+" (~"+fmtDur(dl[mx])+") · shortest around "+b.d+" "+MONTHS[b.m]+" (~"+fmtDur(dl[mn])+"). Vertical axis is local clock time, so daylight-saving jumps show up as steps.";
+}
+var YL=34,YT=6,YB=20,YR=6;
+function drawYear(){
+  buildYear();
+  var f=fit(year),x=f.x,w=f.w,h=f.h,pw=w-YL-YR,ph=h-YT-YB;
+  x.clearRect(0,0,w,h);x.imageSmoothingEnabled=true;
+  x.drawImage(yearImg,YL,YT,pw,ph);
+  x.font="10px "+getComputedStyle(document.body).fontFamily;x.fillStyle="#8f94ad";x.textAlign="right";x.textBaseline="middle";
+  for(var hh=0;hh<=24;hh+=6){var yy=YT+hh/24*ph;x.fillText(pad(hh%24)+"h",YL-5,yy);x.strokeStyle="rgba(0,0,0,.25)";x.beginPath();x.moveTo(YL,yy);x.lineTo(YL+pw,yy);x.stroke();}
+  x.textAlign="center";x.textBaseline="top";var nd=daysIn(S.year);
+  for(var m=0;m<12;m++){var d0=mdToDoy(S.year,m,1)-1,xx=YL+d0/nd*pw;x.strokeStyle="rgba(0,0,0,.3)";x.beginPath();x.moveTo(xx,YT);x.lineTo(xx,YT+ph);x.stroke();x.fillStyle="#8f94ad";x.fillText(MONTHS[m],xx+pw/24,YT+ph+5);}
+  var sx=YL+(S.doy-0.5)/nd*pw,sy=YT+S.minute/1440*ph;
+  x.strokeStyle="rgba(255,255,255,.75)";x.lineWidth=1;x.beginPath();x.moveTo(sx,YT);x.lineTo(sx,YT+ph);x.moveTo(YL,sy);x.lineTo(YL+pw,sy);x.stroke();
+  x.fillStyle="#fff";x.strokeStyle="#ffb547";x.lineWidth=2;x.beginPath();x.arc(sx,sy,5,0,7);x.fill();x.stroke();
+}
+
+function stat(k,v,s,big){return '<div class="stat"><div class="k">'+k+'</div><div class="v'+(big?' big':'')+'">'+v+'</div>'+(s?'<div class="s">'+s+'</div>':'')+'</div>';}
+function range(a,b){return (a==null&&b==null)?"—":fmtTime(a)+" – "+fmtTime(b);}
+function renderStats(){
+  var t=curTime(),sp=solar(t,S.lat,S.lon),D=DAY,html="";
+  var riseTxt,setTxt;
+  if(D.rs.up==null&&D.rs.down==null){riseTxt=D.maxA>-0.833?"Midnight sun":"Polar night";setTxt="—";}
+  else{riseTxt=fmtTime(D.rs.up);setTxt=fmtTime(D.rs.down);}
+  var shadow=sp.alt>0?(1/Math.tan(sp.alt*D2R)):null;
+  var compass=["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"][Math.round(sp.az/22.5)%16];
+  html+=stat("Sunrise",riseTxt,D.rs.up!=null?"az "+solar(D.rs.up,S.lat,S.lon).az.toFixed(0)+"°":"",true);
+  html+=stat("Sunset",setTxt,D.rs.down!=null?"az "+solar(D.rs.down,S.lat,S.lon).az.toFixed(0)+"°":"",true);
+  html+=stat("Day length",fmtDur(D.dayMin),"noon "+fmtTime(D.noon));
+  html+=stat("Sun now",sp.alt.toFixed(1)+"°","az "+sp.az.toFixed(1)+"° "+compass);
+  html+=stat("Shadow · 1 m pole",shadow==null?"none":(shadow>99?">99 m":shadow.toFixed(2)+" m"),shadow==null?"sun below horizon":"points "+((sp.az+180)%360).toFixed(0)+"°");
+  html+=stat("Noon altitude",D.noonAlt.toFixed(1)+"°","decl "+sp.dec.toFixed(2)+"°");
+  html+=stat("Golden hour AM",D.blue.up!=null||D.gold.up!=null?range(D.blue.up,D.gold.up):"—","sun −4° → 6°");
+  html+=stat("Golden hour PM",D.gold.down!=null||D.blue.down!=null?range(D.gold.down,D.blue.down):"—","sun 6° → −4°");
+  html+=stat("Civil twilight",range(D.civ.up,D.civ.down),"first light – last light");
+  html+=stat("Blue hour AM",range(D.civ.up,D.blue.up),"sun −6° → −4°");
+  html+=stat("Blue hour PM",range(D.blue.down,D.civ.down),"sun −4° → −6°");
+  html+=stat("Astro. dark",D.ast.down!=null?fmtTime(D.ast.down)+" – "+fmtTime(D.ast.up):(D.minA<-18?"all night":"none"),"sun below −18°");
+  document.getElementById("stats").innerHTML=html;
+  var md=doyToMD(S.year,S.doy);
+  var dow=["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][new Date(Date.UTC(S.year,md.m,md.d)).getUTCDay()];
+  document.getElementById("dateTag").textContent=dow+" "+md.d+" "+MONTHS[md.m]+" "+S.year;
+  var off=tzOffset(t),os=(off<0?"−":"+")+pad(Math.floor(Math.abs(off)/60))+":"+pad(Math.abs(off)%60);
+  document.getElementById("placeTag").textContent=S.name+" · "+Math.abs(S.lat).toFixed(2)+"°"+(S.lat>=0?"N":"S")+" "+Math.abs(S.lon).toFixed(2)+"°"+(S.lon>=0?"E":"W")+" · UTC"+os;
+  document.getElementById("timeV").textContent=fmtTime(t);
+  document.getElementById("dayV").textContent=md.d+" "+MONTHS[md.m];
+}
+
+var dayKey="";
+function render(){
+  var k=S.lat+","+S.lon+","+S.tz+","+S.year+","+S.doy;
+  if(k!==dayKey||!DAY){DAY=analyseDay(S.year,S.doy);dayKey=k;}
+  timeR.value=S.minute;dayR.max=daysIn(S.year);dayR.value=S.doy;
+  var md=doyToMD(S.year,S.doy);dateI.value=S.year+"-"+pad(md.m+1)+"-"+pad(md.d);
+  renderStats();drawPolar();drawCurve();drawYear();
+}
+var raf=0;function schedule(){if(!raf)raf=requestAnimationFrame(function(){raf=0;render();});}
+
+/* ---------- controls ---------- */
+var citySel=document.getElementById("city"),timeR=document.getElementById("timeR"),dayR=document.getElementById("dayR"),dateI=document.getElementById("dateI"),latI=document.getElementById("lat"),lonI=document.getElementById("lon"),customBox=document.getElementById("custom"),playB=document.getElementById("play");
+CITIES.forEach(function(c,i){var o=document.createElement("option");o.value=i;o.textContent=c[0];citySel.appendChild(o);});
+var oc=document.createElement("option");oc.value="custom";oc.textContent="Custom lat / lon…";citySel.appendChild(oc);
+function setCity(i){var c=CITIES[i];S.lat=c[1];S.lon=c[2];S.tz=c[3];S.name=c[0];customBox.classList.remove("on");citySel.value=i;save();}
+function setCustom(lat,lon,name){S.lat=Math.max(-89.9,Math.min(89.9,lat));S.lon=((lon+540)%360)-180;S.tz=deviceTZ;S.name=name||"Custom";latI.value=S.lat.toFixed(3);lonI.value=S.lon.toFixed(3);customBox.classList.add("on");citySel.value="custom";save();}
+citySel.addEventListener("change",function(){if(citySel.value==="custom"){setCustom(+latI.value||S.lat,+lonI.value||S.lon);}else setCity(+citySel.value);schedule();});
+function onLL(){var la=parseFloat(latI.value),lo=parseFloat(lonI.value);if(isFinite(la)&&isFinite(lo)){S.lat=Math.max(-89.9,Math.min(89.9,la));S.lon=Math.max(-180,Math.min(180,lo));S.tz=deviceTZ;S.name="Custom";save();schedule();}}
+latI.addEventListener("input",onLL);lonI.addEventListener("input",onLL);
+document.getElementById("geo").addEventListener("click",function(){
+  var b=this;try{if(!navigator.geolocation)throw 0;b.textContent="…";navigator.geolocation.getCurrentPosition(function(p){b.textContent="⌖ Locate";setCustom(p.coords.latitude,p.coords.longitude,"Your location");schedule();},function(){b.textContent="⌖ Unavailable";setTimeout(function(){b.textContent="⌖ Locate";},2000);},{timeout:8000});}catch(e){b.textContent="⌖ Unavailable";setTimeout(function(){b.textContent="⌖ Locate";},2000);}
+});
+timeR.addEventListener("input",function(){S.minute=+timeR.value;schedule();});
+dayR.addEventListener("input",function(){S.doy=+dayR.value;schedule();});
+dateI.addEventListener("change",function(){var p=dateI.value.split("-");if(p.length===3&&+p[0]>1800&&+p[0]<2300){S.year=+p[0];S.doy=mdToDoy(S.year,+p[1]-1,+p[2]);schedule();}});
+function shiftDay(n){S.doy+=n;if(S.doy<1){S.year--;S.doy+=daysIn(S.year);}else if(S.doy>daysIn(S.year)){S.doy-=daysIn(S.year);S.year++;}schedule();}
+document.getElementById("prev").addEventListener("click",function(){shiftDay(-1);});
+document.getElementById("next").addEventListener("click",function(){shiftDay(1);});
+function goNow(){var p=localParts(Date.now());S.year=p.y;S.doy=mdToDoy(p.y,p.m,p.d);S.minute=p.h*60+p.mi;schedule();}
+document.getElementById("now").addEventListener("click",goNow);
+var last=0;
+function tick(ts){if(!S.playing)return;if(!last)last=ts;var dt=Math.min(100,ts-last);last=ts;S.minute+=dt*0.12;if(S.minute>=1440){S.minute-=1440;shiftDay(1);}S.minute=S.minute;render();requestAnimationFrame(tick);}
+playB.addEventListener("click",function(){S.playing=!S.playing;playB.textContent=S.playing?"❚❚ Pause":"▶ Play day";if(S.playing){last=0;requestAnimationFrame(tick);}});
+var origRender=render;
+render=function(){S.minute=Math.max(0,Math.min(1439.99,S.minute));origRender();};
+
+function yearPick(e){
+  var r=year.getBoundingClientRect(),px=e.clientX-r.left,py=e.clientY-r.top,pw=r.width-YL-YR,ph=r.height-YT-YB;
+  var fx=(px-YL)/pw,fy=(py-YT)/ph;fx=Math.max(0,Math.min(0.9999,fx));fy=Math.max(0,Math.min(0.9999,fy));
+  S.doy=Math.floor(fx*daysIn(S.year))+1;S.minute=Math.round(fy*1440);schedule();
+}
+var dragging=false;
+year.addEventListener("pointerdown",function(e){dragging=true;try{year.setPointerCapture(e.pointerId);}catch(_){}yearPick(e);});
+year.addEventListener("pointermove",function(e){if(dragging)yearPick(e);});
+window.addEventListener("pointerup",function(){dragging=false;});
+function curvePick(e){var r=curve.getBoundingClientRect(),pw=r.width-38,fx=(e.clientX-r.left-30)/pw;S.minute=Math.round(Math.max(0,Math.min(1439,fx*1440)));schedule();}
+var cdrag=false;
+curve.addEventListener("pointerdown",function(e){cdrag=true;try{curve.setPointerCapture(e.pointerId);}catch(_){}curvePick(e);});
+curve.addEventListener("pointermove",function(e){if(cdrag)curvePick(e);});
+window.addEventListener("pointerup",function(){cdrag=false;});
+window.addEventListener("resize",schedule);
+document.addEventListener("keydown",function(e){if(e.target.tagName==="INPUT"||e.target.tagName==="SELECT")return;if(e.key==="ArrowRight"){S.minute=(S.minute+15)%1440;schedule();}else if(e.key==="ArrowLeft"){S.minute=(S.minute+1425)%1440;schedule();}else if(e.key==="ArrowUp"){shiftDay(1);}else if(e.key==="ArrowDown"){shiftDay(-1);}else if(e.key===" "){e.preventDefault();playB.click();}});
+
+function save(){try{localStorage.setItem("heliograph.loc",JSON.stringify({lat:S.lat,lon:S.lon,tz:S.tz,name:S.name,city:citySel.value}));}catch(e){}}
+/* ---------- init ---------- */
+var restored=false;
+try{var sv=JSON.parse(localStorage.getItem("heliograph.loc")||"null");if(sv&&isFinite(sv.lat)){if(sv.city!=="custom"&&CITIES[+sv.city]){setCity(+sv.city);}else{setCustom(sv.lat,sv.lon,sv.name);}restored=true;}}catch(e){}
+if(!restored){var idx=3;for(var i=0;i<CITIES.length;i++){if(CITIES[i][3]===deviceTZ){idx=i;break;}}setCity(idx);}
+goNow();
+window.__helio={solar:solar,analyseDay:analyseDay,S:S,localToUtc:localToUtc};
+})();
+</script>
+</body>
+</html>
+
+</body></html>
