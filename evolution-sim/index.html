@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Evolution sim v8 — bigger worlds, max speed</title>
+<style>
+  :root { --bg:#fafaf7; --card:#f1efe8; --text:#2c2c2a; --muted:#5f5e5a; --border:rgba(0,0,0,0.12); --ink:#2c2c2a; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#1c1c1b; --card:#2a2a28; --text:#ecebe6; --muted:#b4b2a9; --border:rgba(255,255,255,0.14); --ink:#ecebe6; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.5 system-ui, sans-serif; }
+  main { max-width:440px; margin:0 auto; padding:12px; }
+  canvas { width:100%; display:block; border:1px solid var(--border); border-radius:10px; }
+  h2 { font-size:15px; font-weight:500; margin:18px 0 4px; }
+  .stats { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin:10px 0; }
+  .stat { background:var(--card); border-radius:8px; padding:6px 10px; }
+  .stat p { margin:0; font-size:12px; color:var(--muted); }
+  .stat b { font-size:18px; font-weight:500; }
+  .legend { display:flex; flex-wrap:wrap; gap:12px; font-size:12px; color:var(--muted); margin:4px 0; }
+  .legend i { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:4px; vertical-align:-1px; }
+  .row { display:flex; align-items:center; gap:10px; margin:6px 0; font-size:13px; color:var(--muted); }
+  .row input[type=range] { flex:1; }
+  .row span { min-width:36px; text-align:right; color:var(--text); }
+  button, select, input[type=number] { font:inherit; font-size:13px; color:var(--text); background:transparent;
+    border:1px solid var(--border); border-radius:8px; padding:6px 10px; }
+  button { cursor:pointer; }
+  .btns { display:flex; flex-wrap:wrap; gap:8px; margin:8px 0; }
+  .note { font-size:12px; color:var(--muted); margin:4px 0; }
+</style>
+</head>
+<body>
+<main>
+  <canvas id="world" width="380" height="280"></canvas>
+  <p class="note">Colour = species (found by clustering genomes, never declared). Dark ring = hunter (digests meat better than plants). Small dots = juveniles. Brown squares = carcasses.</p>
+
+  <div class="stats">
+    <div class="stat"><p>Organisms</p><b id="sPop">0</b></div>
+    <div class="stat"><p>Species alive / ever</p><b id="sSpecies">0</b></div>
+    <div class="stat"><p>Hunters</p><b id="sHunters">0</b></div>
+    <div class="stat"><p>Time</p><b id="sTime">0s</b></div>
+    <div class="stat"><p>Hunt success (last 30 s)</p><b id="sHunt">–</b></div>
+    <div class="stat"><p>Avg lifespan gene</p><b id="sLife">1.00</b></div>
+    <div class="stat"><p>Extra genes per organism</p><b id="sExtra">0</b></div>
+    <div class="stat"><p>Avg recombination rate</p><b id="sRecomb">0.50</b></div>
+  </div>
+  <p class="note" id="sGenome">Regulators per organism by condition: –</p>
+  <p class="note" id="sDeaths">Deaths in the last 30 s: –</p>
+
+  <h2>Lifetime totals</h2>
+  <div class="stats" style="margin-top:4px">
+    <div class="stat"><p>Organisms ever lived</p><b id="tEver">0</b></div>
+    <div class="stat"><p>Total deaths</p><b id="tDied">0</b></div>
+    <div class="stat"><p>Generations: max / avg alive</p><b id="tGen">1 / 1</b></div>
+    <div class="stat"><p>Avg age at death</p><b id="tAge">–</b></div>
+    <div class="stat"><p>Births: sexual / clone</p><b id="tBirths">0 / 0</b></div>
+    <div class="stat"><p>Kills (hunt success)</p><b id="tKills">0</b></div>
+  </div>
+  <p class="note" id="tCauses">Deaths by cause since the start: –</p>
+
+  <h2>Family tree of species</h2>
+  <canvas id="treeChart" width="380" height="200"></canvas>
+  <p class="note">Each bar is a species over time, thicker when it has more members. Thin vertical lines show which species a new one split from.</p>
+
+  <h2>Diet vs body size</h2>
+  <canvas id="scatterChart" width="380" height="160"></canvas>
+  <p class="note">x = carnivory gene (0 plant eater → 1 meat eater), y = size (0 to 3). Separate clouds = separate niches.</p>
+
+  <h2>Totals</h2>
+  <div class="legend">
+    <span><i style="background:#888780"></i>Organisms</span>
+    <span><i style="background:#D85A30"></i>Hunters</span>
+    <span><i style="background:#639922"></i>Plant biomass</span>
+    <span><i style="background:#7F77DD"></i>Species alive</span>
+  </div>
+  <canvas id="popChart" width="380" height="110"></canvas>
+  <p class="note">Each line is scaled to its own peak.</p>
+
+  <h2>Controls</h2>
+  <div class="btns">
+    <button id="btnPlay">Pause</button>
+    <button id="btnReset">Reset</button>
+    <button id="btnAdd">+20 random organisms</button>
+  </div>
+  <div class="row"><label for="seed">Seed</label><input type="number" id="seed" value="42" style="width:90px"><span class="note" style="text-align:left">same seed + settings = same run</span></div>
+  <div class="row"><label>World size</label><select id="worldSize" style="flex:1">
+    <option value="1" selected>1× area (380 × 280, up to 900 organisms)</option>
+    <option value="1.5">2.25× area (570 × 420, up to 2,025)</option>
+    <option value="2">4× area (760 × 560, up to 3,600)</option>
+  </select></div>
+  <p class="note">World size applies when you press Reset.</p>
+  <div class="row"><label><input type="checkbox" id="maxSpeed" checked> Max speed: run as fast as this device allows</label></div>
+  <p class="note" id="rateOut">–</p>
+  <div class="row"><label>Sim speed (when max speed is off)</label><input type="range" id="speed" min="1" max="30" step="1" value="6"><span id="speedOut">6x</span></div>
+  <div class="row"><label>Mutation</label><input type="range" id="mutation" min="0" max="40" step="1" value="10"><span id="mutationOut">10%</span></div>
+  <div class="row"><label>Plant growth</label><input type="range" id="growth" min="1" max="40" step="1" value="12"><span id="growthOut">12</span></div>
+  <div class="row"><label>Mating range</label><input type="range" id="mateThreshold" min="20" max="150" step="5" value="60"><span id="mateThresholdOut">0.60</span></div>
+  <p class="note">Mating range = how genetically different two organisms can be and still mate. Lower = species split more easily.</p>
+  <div class="row"><label><input type="checkbox" id="asexual" checked> Clone if no mate is found for a while</label></div>
+  <div class="row"><label><input type="checkbox" id="immigration"> Immigration when the population drops below 10 (off by default: it never triggered in tests)</label></div>
+
+  <h2>Energy formula</h2>
+  <div class="row"><label><input type="radio" name="energyModel" value="classic" checked> Classic: resting ∝ body², moving ∝ body³ × speed², sensing ∝ sense</label></div>
+  <div class="row"><label><input type="radio" name="energyModel" value="realistic"> Realistic: resting ∝ body^2.25 (Kleiber), moving ∝ body² × speed, sensing ∝ sense²</label></div>
+  <p class="note">Both cost the same for an average adult at top speed. Press Reset after switching for a clean comparison.</p>
+
+  <h2>Seasons</h2>
+  <div class="row"><label><input type="checkbox" id="seasons"> Seasons: plant growth rises and falls over a 2-minute year</label></div>
+  <p class="note" id="sSeason">Plant growth now: normal</p>
+
+  <h2>Genome layer</h2>
+  <div class="row"><label><input type="checkbox" id="linkage"> Linkage: genes on a chromosome, nearby genes inherited together</label></div>
+  <div class="row"><label><input type="checkbox" id="regulation"> Regulation: genes that switch other genes up or down</label></div>
+  <div class="row"><label><input type="checkbox" id="duplication"> Duplication: genes can be copied and drift</label></div>
+  <p class="note">Off by default in v6, because the balance was tuned with them off. Changes apply to new births; press Reset for a clean comparison.</p>
+
+  <h2>Data</h2>
+  <div class="btns"><button id="btnCopy">Copy log as CSV</button><span id="copyMsg" class="note" style="align-self:center"></span></div>
+</main>
+
+<script type="module" src="/src/ui/main.ts"></script>
+</body>
+</html>

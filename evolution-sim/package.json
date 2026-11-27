@@ -1,0 +1,25 @@
+{
+  "name": "evolution-sim",
+  "version": "0.9.0",
+  "private": true,
+  "description": "Browser artificial-life simulation where species, diets and behaviours emerge from evolution",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.engine.json",
+    "typecheck": "tsc -p tsconfig.engine.json --noEmit && tsc -p tsconfig.web.json --noEmit",
+    "test": "vitest run",
+    "sim": "node dist/cli/run.js",
+    "dev": "vite",
+    "build:web": "vite build",
+    "preview": "vite preview",
+    "baseline": "node scripts/run-matrix.mjs legacy test/baseline/v8-baseline.json",
+    "verify": "npm run build && node scripts/run-matrix.mjs port out/port-matrix.json --compare test/baseline/v8-baseline.json"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.11",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vite": "^8.4.0",
+    "vitest": "^5.1.2"
+  }
+}
