@@ -73,6 +73,17 @@ Each science lesson becomes a default or a warning in the sweep tools:
 
 **Decide what you'll measure before you look.** `summarise.py` defines its measures up front (extinctions, lowest population, species, hunter presence per window, hunt success, deaths by cause, load, genes). Choosing a measure after seeing the data makes it easy to find a pattern that isn't there.
 
+**Check new tools against a known answer first.** Before trusting the sweep and summary on an open question, we ran one whose answer theory gives. Since v6 a hunt's success is hunter speed ÷ (hunter speed + `ESCAPE_FACTOR` × prey speed), so at equal speeds it is 1 ÷ (1 + `ESCAPE_FACTOR`): 55.6% at 0.8 and 40.0% at 1.5. Sweep `sweeps/escape-known-answer` (20 seeds, 60 sim-minutes, 1× world, both formulas, 6.8 minutes on 4 cores):
+
+| Energy formula | `ESCAPE_FACTOR` | Hunt success | Seeds with hunts | Extinct |
+| --- | --- | ---: | ---: | ---: |
+| classic | 0.8 | 57.1% | 19 of 20 | 0 |
+| classic | 1.5 | 42.1% | 19 of 20 | 1 |
+| realistic | 0.8 | 55.5% | 20 of 20 | 0 |
+| realistic | 1.5 | 41.4% | 20 of 20 | 0 |
+
+Both sit 1–2 points above the equal-speed figure (probably because hunters are a little faster than the prey they catch; the log doesn't record that yet), the same under both formulas, and 0.8 beat 1.5 in every one of the 39 seeds that had hunts. The pipeline measures what it should. The same runs also show what the 1× world is like: the lowest population averages about 36, and the share of runs with hunters falls from 0.9 to 0.5–0.7 in the last 20 minutes, which is why step 3 uses the 4× world.
+
 **Read the summary with care:**
 - `hunt_success` is blank, not 0%, when there were no hunts.
 - Gene averages and load leave out runs that went extinct, since an empty world has no averages. Check `extinct` before comparing them.
