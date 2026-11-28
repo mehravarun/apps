@@ -8,6 +8,7 @@ A static site of self-contained HTML apps, published with GitHub Pages (branch `
 - `apps.json`: one entry per app (metadata for the landing page, search and social previews)
 - `site.json`: site name, tagline, `base_url` and optional `custom_domain`
 - `build.py`: generates everything in `docs/` (don't edit `docs/` by hand)
+- `evolution-sim/`: the Evolution Sim as a TypeScript project (engine, headless CLI, tests); see its README. The published page is still `src/evolution-sim.html`
 
 ## Adding an app
 

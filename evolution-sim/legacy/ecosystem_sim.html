@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ecosystem sim — plants, herbivores, predators</title>
+<style>
+  :root { --bg:#fafaf7; --card:#f1efe8; --text:#2c2c2a; --muted:#5f5e5a; --border:rgba(0,0,0,0.12); }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#1c1c1b; --card:#2a2a28; --text:#ecebe6; --muted:#b4b2a9; --border:rgba(255,255,255,0.14); }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.5 system-ui, sans-serif; }
+  main { max-width:440px; margin:0 auto; padding:12px; }
+  canvas { width:100%; display:block; border:1px solid var(--border); border-radius:10px; }
+  h2 { font-size:15px; font-weight:500; margin:18px 0 6px; }
+  .stats { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin:10px 0; }
+  .stat { background:var(--card); border-radius:8px; padding:6px 10px; }
+  .stat p { margin:0; font-size:12px; color:var(--muted); }
+  .stat b { font-size:18px; font-weight:500; }
+  .legend { display:flex; flex-wrap:wrap; gap:12px; font-size:12px; color:var(--muted); margin:4px 0; }
+  .legend i { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:4px; vertical-align:-1px; }
+  .row { display:flex; align-items:center; gap:10px; margin:6px 0; font-size:13px; color:var(--muted); }
+  .row input[type=range] { flex:1; }
+  .row span { min-width:36px; text-align:right; color:var(--text); }
+  button, select, input[type=number] { font:inherit; font-size:13px; color:var(--text); background:transparent;
+    border:1px solid var(--border); border-radius:8px; padding:6px 10px; }
+  button { cursor:pointer; }
+  .btns { display:flex; flex-wrap:wrap; gap:8px; margin:8px 0; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  td { padding:4px 2px; border-bottom:1px solid var(--border); }
+  td input[type=number] { width:64px; padding:4px 6px; }
+  .note { font-size:12px; color:var(--muted); }
+</style>
+</head>
+<body>
+<main>
+  <canvas id="world" width="380" height="280"></canvas>
+
+  <div class="stats">
+    <div class="stat"><p>Herbivores</p><b id="sHerb" style="color:#378ADD">0</b></div>
+    <div class="stat"><p>Predators</p><b id="sPred" style="color:#D85A30">0</b></div>
+    <div class="stat"><p>Plant cover</p><b id="sPlant" style="color:#639922">0%</b></div>
+    <div class="stat"><p>Time</p><b id="sTime">0s</b></div>
+  </div>
+
+  <h2>Populations</h2>
+  <div class="legend">
+    <span><i style="background:#378ADD"></i>Herbivores</span>
+    <span><i style="background:#D85A30"></i>Predators</span>
+    <span><i style="background:#639922"></i>Plant biomass</span>
+  </div>
+  <canvas id="popChart" width="380" height="120"></canvas>
+  <p class="note">Each line is scaled to its own peak so you can compare the timing of the cycles.</p>
+
+  <h2>Average traits
+    <select id="traitSpecies" style="margin-left:8px">
+      <option value="herbivore">Herbivores</option>
+      <option value="predator">Predators</option>
+    </select>
+  </h2>
+  <div class="legend">
+    <span><i style="background:#BA7517"></i>Speed</span>
+    <span><i style="background:#1D9E75"></i>Size</span>
+    <span><i style="background:#7F77DD"></i>Sense</span>
+  </div>
+  <canvas id="traitChart" width="380" height="120"></canvas>
+  <p class="note">Dashed line = 1.0. Axis runs 0 to 3.</p>
+
+  <h2>Controls</h2>
+  <div class="btns">
+    <button id="btnPlay">Pause</button>
+    <button id="btnReset">Reset</button>
+    <button id="btnHerb">+10 herbivores</button>
+    <button id="btnPred">+3 predators</button>
+  </div>
+  <div class="row"><label><input type="checkbox" id="immigration" checked> Immigration (a newcomer arrives when a species drops below 3)</label></div>
+  <div class="row"><label for="seed">Seed</label><input type="number" id="seed" value="42" style="width:90px"><span class="note" style="text-align:left">same seed + settings = same run</span></div>
+  <div class="row"><label>Sim speed</label><input type="range" id="speed" min="1" max="10" step="1" value="3"><span id="speedOut">3x</span></div>
+  <div class="row"><label>Mutation</label><input type="range" id="mutation" min="0" max="40" step="1" value="10"><span id="mutationOut">10%</span></div>
+  <div class="row"><label>Plant growth</label><input type="range" id="growth" min="1" max="40" step="1" value="12"><span id="growthOut">12</span></div>
+
+  <h2>Who eats whom</h2>
+  <table id="interactionTable"></table>
+  <div class="btns">
+    <select id="newEater"><option>herbivore</option><option>predator</option></select>
+    <span style="align-self:center" class="note">eats</span>
+    <select id="newPrey"><option>plant</option><option>herbivore</option><option>predator</option></select>
+    <button id="btnAddRow">Add rule</button>
+  </div>
+  <p class="note">Efficiency is the fraction of the prey's energy the eater keeps; the rest is lost. Every species automatically flees from anything that has a rule to eat it.</p>
+
+  <h2>Data</h2>
+  <div class="btns"><button id="btnCopy">Copy log as CSV</button><span id="copyMsg" class="note" style="align-self:center"></span></div>
+</main>
+
+<script>
+/* =====================================================================
+   CONFIG — species, genes and the interaction table
+   ===================================================================== */
+
+const SPECIES = {
+  herbivore: { color: '#378ADD', startCount: 100, startEnergy: 60,  splitEnergy: 120, maxAge: 4000, metabolism: 0.03,
+               genes: { speed: 1.0, size: 1.0, sense: 1.0 } },
+  predator:  { color: '#D85A30', startCount: 6,   startEnergy: 200, splitEnergy: 200, maxAge: 6000, metabolism: 0.045,
+               genes: { speed: 1.0, size: 1.4, sense: 1.3 } },
+};
+
+// Data, not code: add a row and the behaviour follows.
+const DEFAULT_INTERACTIONS = [
+  { eater: 'herbivore', prey: 'plant',     efficiency: 0.6, on: true  },
+  { eater: 'predator',  prey: 'herbivore', efficiency: 0.6, on: true  },
+  { eater: 'predator',  prey: 'plant',     efficiency: 0.2, on: false },
+];
+
+const WORLD_W = 380, WORLD_H = 280;
+const PLANT_CELL = 10;          // plant grid resolution in px
+const HASH_CELL = 40;           // spatial hash bucket size in px
+const MAX_AGENTS = 800;
+const LOG_EVERY = 30;           // ticks between log samples
+const TICKS_PER_SEC = 60;
+const ROOT_FLOOR = 0.03;        // grazing leaves this much biomass behind
+const COVER_LEVEL = 0.6;       // plant biomass above which an animal is hidden
+const COVER_RANGE = 12;        // ...unless the hunter is this close (px)
+const HANDLING_TIME = 150;     // ticks a predator rests after a kill (stabilises predator-prey cycles)
+
+/* =====================================================================
+   ENGINE — no drawing in here, so it could run headless / in a Worker
+   ===================================================================== */
+
+function mulberry32(seed) {
+  return function () {
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+class World {
+  constructor(seed, interactions) {
+    this.rand = mulberry32(seed);
+    this.tick = 0;
+    this.agents = [];
+    this.log = [];
+    this.params = { mutation: 0.10, plantGrowth: 0.012, immigration: true };
+    this.setInteractions(interactions);
+    this.initPlants();
+    for (const name in SPECIES) this.spawn(name, SPECIES[name].startCount);
+  }
+
+  /* ---------- interaction table -> diet and threat lookups ---------- */
+  setInteractions(rows) {
+    this.interactions = rows;
+    this.diet = {};     // diet[eater][prey] = efficiency
+    this.threats = {};  // threats[prey] = Set of eaters
+    for (const name in SPECIES) { this.diet[name] = {}; this.threats[name] = new Set(); }
+    for (const r of rows) {
+      if (!r.on) continue;
+      this.diet[r.eater][r.prey] = r.efficiency;
+      if (r.prey !== 'plant') this.threats[r.prey].add(r.eater);
+    }
+  }
+
+  /* ---------- plants: a grid of biomass with fertile patches ---------- */
+  initPlants() {
+    this.cols = Math.ceil(WORLD_W / PLANT_CELL);
+    this.rows = Math.ceil(WORLD_H / PLANT_CELL);
+    const n = this.cols * this.rows;
+    this.biomass = new Float32Array(n);
+    this.capacity = new Float32Array(n);
+
+    // A few fertile "hills"; the gaps between them are barren
+    const hills = Array.from({ length: 6 }, () => ({
+      x: this.rand() * WORLD_W, y: this.rand() * WORLD_H, s: 35 + this.rand() * 40,
+    }));
+    for (let i = 0; i < n; i++) {
+      const x = (i % this.cols + 0.5) * PLANT_CELL, y = (Math.floor(i / this.cols) + 0.5) * PLANT_CELL;
+      let v = 0;
+      for (const h of hills) v += Math.exp(-((x - h.x) ** 2 + (y - h.y) ** 2) / (2 * h.s * h.s));
+      v = Math.min(1, v);
+      this.capacity[i] = v > 0.15 ? v : 0;
+      this.biomass[i] = this.capacity[i] * (0.3 + 0.5 * this.rand());
+    }
+  }
+
+  stepPlants() {
+    const { cols, rows, biomass, capacity } = this;
+    const r = this.params.plantGrowth;
+    for (let i = 0; i < biomass.length; i++) {
+      const cap = capacity[i];
+      if (cap === 0) continue;
+      const b = biomass[i];
+      if (b > 0) {
+        biomass[i] = b + r * b * (1 - b / cap);          // logistic growth
+      } else {
+        // bare cell: re-seeded only from living neighbours
+        const c = i % cols, rr = Math.floor(i / cols);
+        let nb = 0;
+        if (c > 0) nb += biomass[i - 1];
+        if (c < cols - 1) nb += biomass[i + 1];
+        if (rr > 0) nb += biomass[i - cols];
+        if (rr < rows - 1) nb += biomass[i + cols];
+        if (nb > 0 && this.rand() < r * nb) biomass[i] = 0.02;
+      }
+    }
+  }
+
+  cellAt(x, y) {
+    const c = Math.min(this.cols - 1, Math.max(0, Math.floor(x / PLANT_CELL)));
+    const r = Math.min(this.rows - 1, Math.max(0, Math.floor(y / PLANT_CELL)));
+    return r * this.cols + c;
+  }
+
+  bestPlantCell(a, radius) {
+    const cr = Math.ceil(radius / PLANT_CELL);
+    const c0 = Math.floor(a.x / PLANT_CELL), r0 = Math.floor(a.y / PLANT_CELL);
+    let best = null, bestScore = 0.1;
+    for (let dr = -cr; dr <= cr; dr++) for (let dc = -cr; dc <= cr; dc++) {
+      const c = c0 + dc, r = r0 + dr;
+      if (c < 0 || r < 0 || c >= this.cols || r >= this.rows) continue;
+      const d = Math.hypot(dc, dr) * PLANT_CELL;
+      if (d > radius) continue;
+      const score = this.biomass[r * this.cols + c] - d * 0.002;
+      if (score > bestScore) { bestScore = score; best = { x: (c + 0.5) * PLANT_CELL, y: (r + 0.5) * PLANT_CELL }; }
+    }
+    return best;
+  }
+
+  /* ---------- agents ---------- */
+  makeAgent(species, x, y, genes, generation) {
+    return { species, x, y, angle: this.rand() * Math.PI * 2, genes,
+             energy: SPECIES[species].startEnergy, age: 0, generation, cooldown: 0, dead: false };
+  }
+
+  spawn(species, count) {
+    for (let i = 0; i < count && this.agents.length < MAX_AGENTS; i++) {
+      this.agents.push(this.makeAgent(species, this.rand() * WORLD_W, this.rand() * WORLD_H,
+                                      { ...SPECIES[species].genes }, 1));
+    }
+  }
+
+  mutate(v) {
+    const m = this.params.mutation;
+    return Math.min(5, Math.max(0.2, v * (1 + (this.rand() * 2 - 1) * m)));
+  }
+
+  radius(a) { return 3 * a.genes.size + 2; }
+
+  /* ---------- spatial hash: only look at nearby agents ---------- */
+  buildHash() {
+    this.hash = new Map();
+    for (const a of this.agents) {
+      const k = Math.floor(a.x / HASH_CELL) + Math.floor(a.y / HASH_CELL) * 1000;
+      let bucket = this.hash.get(k);
+      if (!bucket) this.hash.set(k, bucket = []);
+      bucket.push(a);
+    }
+  }
+
+  nearest(a, radius, test) {
+    const cx = Math.floor(a.x / HASH_CELL), cy = Math.floor(a.y / HASH_CELL);
+    const span = Math.ceil(radius / HASH_CELL);
+    let best = null, bestD = radius * radius;
+    for (let dy = -span; dy <= span; dy++) for (let dx = -span; dx <= span; dx++) {
+      const bucket = this.hash.get(cx + dx + (cy + dy) * 1000);
+      if (!bucket) continue;
+      for (const o of bucket) {
+        if (o === a || o.dead) continue;
+        const d = (o.x - a.x) ** 2 + (o.y - a.y) ** 2;
+        if (d < bestD && test(o, d)) { bestD = d; best = o; }
+      }
+    }
+    return best;
+  }
+
+  stepAgent(a) {
+    const g = a.genes, spec = SPECIES[a.species], diet = this.diet[a.species];
+    const maxV = 1.2 * g.speed, senseR = 30 * g.sense;
+    let v = maxV * 0.5;                                  // default: wander
+    a.age++; if (a.cooldown > 0) a.cooldown--;
+
+    // 1. Flee from anything that can eat me
+    const threatSet = this.threats[a.species];
+    const threat = threatSet.size ? this.nearest(a, senseR, o => threatSet.has(o.species)) : null;
+
+    if (threat) {
+      a.angle = Math.atan2(a.y - threat.y, a.x - threat.x);
+      v = maxV;
+    } else {
+      // 2. Chase animal prey
+      const hungry = a.cooldown === 0;
+      // prey hiding in thick plants can only be spotted up close
+      const visible = (o, d2) => d2 < COVER_RANGE ** 2 || this.biomass[this.cellAt(o.x, o.y)] < COVER_LEVEL;
+      const prey = hungry ? this.nearest(a, senseR, (o, d2) => diet[o.species] !== undefined && visible(o, d2)) : null;
+      if (prey) {
+        a.angle = Math.atan2(prey.y - a.y, prey.x - a.x);
+        v = maxV;
+        const reach = this.radius(a) + this.radius(prey);
+        if ((prey.x - a.x) ** 2 + (prey.y - a.y) ** 2 < reach * reach) {
+          // bigger attackers win more often
+          if (this.rand() < g.size / (g.size + prey.genes.size)) {
+            a.energy += (Math.max(0, prey.energy) + 30 * prey.genes.size) * diet[prey.species];
+            prey.dead = true;
+            a.cooldown = HANDLING_TIME;            // digesting: can't hunt for a while
+          } else a.cooldown = 30;
+        }
+      } else if (diet.plant !== undefined) {
+        // 3. Graze: slow down on a rich cell, otherwise head for the best one in sight
+        const here = this.biomass[this.cellAt(a.x, a.y)];
+        if (here > ROOT_FLOOR + 0.1) { v = maxV * 0.1; a.angle += (this.rand() - 0.5) * 0.6; }
+        else {
+          const target = this.bestPlantCell(a, senseR);
+          if (target) { a.angle = Math.atan2(target.y - a.y, target.x - a.x); v = maxV * 0.8; }
+          else a.angle += (this.rand() - 0.5) * 0.4;
+        }
+      } else {
+        a.angle += (this.rand() - 0.5) * 0.4;
+      }
+    }
+
+    // Eat plants underfoot (if on the diet and not running for my life)
+    if (diet.plant !== undefined && !threat) {
+      const i = this.cellAt(a.x, a.y);
+      // roots survive: grazing can't take a cell below ROOT_FLOOR, so it regrows
+      const bite = Math.max(0, Math.min(this.biomass[i] - ROOT_FLOOR, 0.008 * g.size));
+      this.biomass[i] -= bite;
+      a.energy += bite * 20 * diet.plant;
+    }
+
+    // Move and bounce off the walls
+    a.x += Math.cos(a.angle) * v;
+    a.y += Math.sin(a.angle) * v;
+    if (a.x < 0 || a.x > WORLD_W) { a.angle = Math.PI - a.angle; a.x = Math.max(0, Math.min(WORLD_W, a.x)); }
+    if (a.y < 0 || a.y > WORLD_H) { a.angle = -a.angle;          a.y = Math.max(0, Math.min(WORLD_H, a.y)); }
+
+    // Energy bill: the selection pressure. Movement cost uses the speed actually used.
+    a.energy -= spec.metabolism + 0.04 * g.size ** 3 * (v / 1.2) ** 2 + 0.02 * g.sense;
+
+    // Reproduce (bigger bodies need more energy to split)
+    if (a.energy > spec.splitEnergy * g.size && this.agents.length < MAX_AGENTS) {
+      a.energy /= 2;
+      this.babies.push(this.makeAgent(a.species, a.x, a.y, {
+        speed: this.mutate(g.speed), size: this.mutate(g.size), sense: this.mutate(g.sense),
+      }, a.generation + 1));
+      this.babies[this.babies.length - 1].energy = a.energy;
+    }
+
+    if (a.energy <= 0 || a.age > spec.maxAge) a.dead = true;
+  }
+
+  step() {
+    this.tick++;
+    this.stepPlants();
+    this.buildHash();
+    this.babies = [];
+    for (const a of this.agents) if (!a.dead) this.stepAgent(a);
+    this.agents = this.agents.filter(a => !a.dead).concat(this.babies);
+    if (this.params.immigration) this.immigrate();
+    if (this.tick % LOG_EVERY === 0) this.record();
+  }
+
+  // A rare species occasionally gets a newcomer from "outside the map".
+  // Real ecosystems are rarely closed; without this, small worlds go extinct.
+  immigrate() {
+    for (const name in SPECIES) {
+      let n = 0;
+      for (const a of this.agents) if (a.species === name) n++;
+      if (n < 3 && this.rand() < 1 / 300) this.spawn(name, 1);
+    }
+  }
+
+  /* ---------- logging ---------- */
+  summary(species) {
+    const list = this.agents.filter(a => a.species === species);
+    const n = list.length || 1;
+    const avg = k => list.reduce((s, a) => s + a.genes[k], 0) / n;
+    return { count: list.length, speed: avg('speed'), size: avg('size'), sense: avg('sense') };
+  }
+
+  record() {
+    const row = { t: this.tick, plants: this.biomass.reduce((s, b) => s + b, 0) };
+    for (const name in SPECIES) row[name] = this.summary(name);
+    this.log.push(row);
+    if (this.log.length > 20000) this.log.shift();
+  }
+
+  toCSV() {
+    const names = Object.keys(SPECIES);
+    const head = ['tick', 'plant_biomass', ...names.flatMap(n => [`${n}_count`, `${n}_speed`, `${n}_size`, `${n}_sense`])];
+    const lines = this.log.map(r => [r.t, r.plants.toFixed(2),
+      ...names.flatMap(n => [r[n].count, r[n].speed.toFixed(3), r[n].size.toFixed(3), r[n].sense.toFixed(3)])].join(','));
+    return [head.join(','), ...lines].join('\n');
+  }
+}
+
+/* =====================================================================
+   RENDERING + UI — reads the world, never changes the rules
+   ===================================================================== */
+
+const $ = id => document.getElementById(id);
+const dpr = window.devicePixelRatio || 1;
+function setupCanvas(id) {
+  const cv = $(id), w = cv.width, h = cv.height;
+  cv.width = w * dpr; cv.height = h * dpr;
+  const ctx = cv.getContext('2d'); ctx.scale(dpr, dpr);
+  return { ctx, w, h };
+}
+const worldView = setupCanvas('world'), popView = setupCanvas('popChart'), traitView = setupCanvas('traitChart');
+
+let interactions = DEFAULT_INTERACTIONS.map(r => ({ ...r }));
+let world, running = true;
+
+function reset() {
+  world = new World(+$('seed').value || 1, interactions);
+  readParams();
+  window.world = world;    // poke at it from the dev console
+}
+
+function readParams() {
+  world.params.mutation = +$('mutation').value / 100;
+  world.params.plantGrowth = +$('growth').value / 1000;
+  world.params.immigration = $('immigration').checked;
+}
+
+function drawWorld() {
+  const { ctx, w, h } = worldView;
+  ctx.clearRect(0, 0, w, h);
+  for (let i = 0; i < world.biomass.length; i++) {
+    const b = world.biomass[i];
+    if (b <= 0) continue;
+    ctx.fillStyle = `rgba(99,153,34,${(0.12 + b * 0.6).toFixed(2)})`;
+    ctx.fillRect((i % world.cols) * PLANT_CELL, Math.floor(i / world.cols) * PLANT_CELL, PLANT_CELL, PLANT_CELL);
+  }
+  for (const a of world.agents) {
+    ctx.fillStyle = SPECIES[a.species].color;
+    ctx.beginPath(); ctx.arc(a.x, a.y, world.radius(a), 0, Math.PI * 2); ctx.fill();
+  }
+}
+
+function drawLines(view, series, fixedMax) {
+  const { ctx, w, h } = view, pad = 6;
+  ctx.clearRect(0, 0, w, h);
+  if (fixedMax) {
+    const y1 = h - pad - (1 / fixedMax) * (h - 2 * pad);
+    ctx.strokeStyle = 'rgba(136,135,128,0.5)'; ctx.setLineDash([3, 3]);
+    ctx.beginPath(); ctx.moveTo(0, y1); ctx.lineTo(w, y1); ctx.stroke(); ctx.setLineDash([]);
+  }
+  for (const s of series) {
+    const max = fixedMax || Math.max(1e-6, ...s.values);
+    ctx.strokeStyle = s.color; ctx.lineWidth = 1.5; ctx.beginPath();
+    s.values.forEach((v, i) => {
+      const x = (i / Math.max(1, s.values.length - 1)) * w;
+      const y = h - pad - Math.min(v, max) / max * (h - 2 * pad);
+      i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    });
+    ctx.stroke();
+  }
+}
+
+function drawCharts() {
+  const recent = world.log.slice(-300);
+  drawLines(popView, [
+    { color: '#639922', values: recent.map(r => r.plants) },
+    { color: '#378ADD', values: recent.map(r => r.herbivore.count) },
+    { color: '#D85A30', values: recent.map(r => r.predator.count) },
+  ]);
+  const sp = $('traitSpecies').value;
+  const alive = recent.filter(r => r[sp].count > 0);
+  drawLines(traitView, [
+    { color: '#BA7517', values: alive.map(r => r[sp].speed) },
+    { color: '#1D9E75', values: alive.map(r => r[sp].size) },
+    { color: '#7F77DD', values: alive.map(r => r[sp].sense) },
+  ], 3);
+}
+
+function drawStats() {
+  let herb = 0, pred = 0;
+  for (const a of world.agents) a.species === 'herbivore' ? herb++ : pred++;
+  let covered = 0, fertile = 0;
+  for (let i = 0; i < world.biomass.length; i++) if (world.capacity[i] > 0) { fertile++; if (world.biomass[i] > 0.05) covered++; }
+  $('sHerb').textContent = herb;
+  $('sPred').textContent = pred;
+  $('sPlant').textContent = Math.round(100 * covered / Math.max(1, fertile)) + '%';
+  $('sTime').textContent = Math.floor(world.tick / TICKS_PER_SEC) + 's';
+}
+
+/* ---------- interaction table editor ---------- */
+function renderTable() {
+  const t = $('interactionTable');
+  t.innerHTML = '';
+  interactions.forEach((r, i) => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input type="checkbox" ${r.on ? 'checked' : ''} aria-label="Enable rule"></td>
+      <td>${r.eater} eats ${r.prey}</td>
+      <td><input type="number" min="0" max="1" step="0.05" value="${r.efficiency}" aria-label="Efficiency"></td>
+      <td><button aria-label="Remove rule">Remove</button></td>`;
+    const [chk, num] = tr.querySelectorAll('input');
+    chk.onchange = () => { r.on = chk.checked; world.setInteractions(interactions); };
+    num.onchange = () => {
+      const v = Math.max(0, Math.min(1, +num.value || 0));
+      num.value = v; r.efficiency = v; world.setInteractions(interactions);
+    };
+    tr.querySelector('button').onclick = () => { interactions.splice(i, 1); world.setInteractions(interactions); renderTable(); };
+    t.appendChild(tr);
+  });
+}
+
+$('btnAddRow').onclick = () => {
+  const eater = $('newEater').value, prey = $('newPrey').value;
+  if (interactions.some(r => r.eater === eater && r.prey === prey)) return;
+  interactions.push({ eater, prey, efficiency: 0.4, on: true });
+  world.setInteractions(interactions);
+  renderTable();
+};
+
+/* ---------- controls ---------- */
+$('btnPlay').onclick = () => { running = !running; $('btnPlay').textContent = running ? 'Pause' : 'Play'; };
+$('btnReset').onclick = reset;
+$('immigration').onchange = readParams;
+$('btnHerb').onclick = () => world.spawn('herbivore', 10);
+$('btnPred').onclick = () => world.spawn('predator', 3);
+$('speed').oninput = e => $('speedOut').textContent = e.target.value + 'x';
+$('mutation').oninput = e => { $('mutationOut').textContent = e.target.value + '%'; readParams(); };
+$('growth').oninput = e => { $('growthOut').textContent = e.target.value; readParams(); };
+$('btnCopy').onclick = async () => {
+  try { await navigator.clipboard.writeText(world.toCSV()); $('copyMsg').textContent = `Copied ${world.log.length} rows`; }
+  catch { $('copyMsg').textContent = 'Clipboard not available here'; }
+};
+
+function loop() {
+  if (running) for (let i = 0; i < +$('speed').value; i++) world.step();
+  drawWorld(); drawStats(); drawCharts();
+  requestAnimationFrame(loop);
+}
+
+reset();
+renderTable();
+loop();
+</script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  // Browser UI and Web Worker (bundled by Vite; this config only type-checks).
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable", "WebWorker"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "types": [],
+    "strict": true,
+    "noUnusedLocals": true,
+    "noEmit": true,
+    "skipLibCheck": true
+  },
+  "include": ["src/engine", "src/ui"]
+}

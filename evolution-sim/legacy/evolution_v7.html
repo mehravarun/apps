@@ -1,0 +1,999 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Evolution sim v7 — seasons</title>
+<style>
+  :root { --bg:#fafaf7; --card:#f1efe8; --text:#2c2c2a; --muted:#5f5e5a; --border:rgba(0,0,0,0.12); --ink:#2c2c2a; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#1c1c1b; --card:#2a2a28; --text:#ecebe6; --muted:#b4b2a9; --border:rgba(255,255,255,0.14); --ink:#ecebe6; }
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:15px/1.5 system-ui, sans-serif; }
+  main { max-width:440px; margin:0 auto; padding:12px; }
+  canvas { width:100%; display:block; border:1px solid var(--border); border-radius:10px; }
+  h2 { font-size:15px; font-weight:500; margin:18px 0 4px; }
+  .stats { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px; margin:10px 0; }
+  .stat { background:var(--card); border-radius:8px; padding:6px 10px; }
+  .stat p { margin:0; font-size:12px; color:var(--muted); }
+  .stat b { font-size:18px; font-weight:500; }
+  .legend { display:flex; flex-wrap:wrap; gap:12px; font-size:12px; color:var(--muted); margin:4px 0; }
+  .legend i { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:4px; vertical-align:-1px; }
+  .row { display:flex; align-items:center; gap:10px; margin:6px 0; font-size:13px; color:var(--muted); }
+  .row input[type=range] { flex:1; }
+  .row span { min-width:36px; text-align:right; color:var(--text); }
+  button, input[type=number] { font:inherit; font-size:13px; color:var(--text); background:transparent;
+    border:1px solid var(--border); border-radius:8px; padding:6px 10px; }
+  button { cursor:pointer; }
+  .btns { display:flex; flex-wrap:wrap; gap:8px; margin:8px 0; }
+  .note { font-size:12px; color:var(--muted); margin:4px 0; }
+</style>
+</head>
+<body>
+<main>
+  <canvas id="world" width="380" height="280"></canvas>
+  <p class="note">Colour = species (found by clustering genomes, never declared). Dark ring = hunter (digests meat better than plants). Small dots = juveniles. Brown squares = carcasses.</p>
+
+  <div class="stats">
+    <div class="stat"><p>Organisms</p><b id="sPop">0</b></div>
+    <div class="stat"><p>Species alive / ever</p><b id="sSpecies">0</b></div>
+    <div class="stat"><p>Hunters</p><b id="sHunters">0</b></div>
+    <div class="stat"><p>Time</p><b id="sTime">0s</b></div>
+    <div class="stat"><p>Hunt success (last 30 s)</p><b id="sHunt">–</b></div>
+    <div class="stat"><p>Avg lifespan gene</p><b id="sLife">1.00</b></div>
+    <div class="stat"><p>Extra genes per organism</p><b id="sExtra">0</b></div>
+    <div class="stat"><p>Avg recombination rate</p><b id="sRecomb">0.50</b></div>
+  </div>
+  <p class="note" id="sGenome">Regulators per organism by condition: –</p>
+  <p class="note" id="sDeaths">Deaths in the last 30 s: –</p>
+
+  <h2>Lifetime totals</h2>
+  <div class="stats" style="margin-top:4px">
+    <div class="stat"><p>Organisms ever lived</p><b id="tEver">0</b></div>
+    <div class="stat"><p>Total deaths</p><b id="tDied">0</b></div>
+    <div class="stat"><p>Generations: max / avg alive</p><b id="tGen">1 / 1</b></div>
+    <div class="stat"><p>Avg age at death</p><b id="tAge">–</b></div>
+    <div class="stat"><p>Births: sexual / clone</p><b id="tBirths">0 / 0</b></div>
+    <div class="stat"><p>Kills (hunt success)</p><b id="tKills">0</b></div>
+  </div>
+  <p class="note" id="tCauses">Deaths by cause since the start: –</p>
+
+  <h2>Family tree of species</h2>
+  <canvas id="treeChart" width="380" height="200"></canvas>
+  <p class="note">Each bar is a species over time, thicker when it has more members. Thin vertical lines show which species a new one split from.</p>
+
+  <h2>Diet vs body size</h2>
+  <canvas id="scatterChart" width="380" height="160"></canvas>
+  <p class="note">x = carnivory gene (0 plant eater → 1 meat eater), y = size (0 to 3). Separate clouds = separate niches.</p>
+
+  <h2>Totals</h2>
+  <div class="legend">
+    <span><i style="background:#888780"></i>Organisms</span>
+    <span><i style="background:#D85A30"></i>Hunters</span>
+    <span><i style="background:#639922"></i>Plant biomass</span>
+    <span><i style="background:#7F77DD"></i>Species alive</span>
+  </div>
+  <canvas id="popChart" width="380" height="110"></canvas>
+  <p class="note">Each line is scaled to its own peak.</p>
+
+  <h2>Controls</h2>
+  <div class="btns">
+    <button id="btnPlay">Pause</button>
+    <button id="btnReset">Reset</button>
+    <button id="btnAdd">+20 random organisms</button>
+  </div>
+  <div class="row"><label for="seed">Seed</label><input type="number" id="seed" value="42" style="width:90px"><span class="note" style="text-align:left">same seed + settings = same run</span></div>
+  <div class="row"><label>Sim speed</label><input type="range" id="speed" min="1" max="30" step="1" value="6"><span id="speedOut">6x</span></div>
+  <div class="row"><label>Mutation</label><input type="range" id="mutation" min="0" max="40" step="1" value="10"><span id="mutationOut">10%</span></div>
+  <div class="row"><label>Plant growth</label><input type="range" id="growth" min="1" max="40" step="1" value="12"><span id="growthOut">12</span></div>
+  <div class="row"><label>Mating range</label><input type="range" id="mateThreshold" min="20" max="150" step="5" value="60"><span id="mateThresholdOut">0.60</span></div>
+  <p class="note">Mating range = how genetically different two organisms can be and still mate. Lower = species split more easily.</p>
+  <div class="row"><label><input type="checkbox" id="asexual" checked> Clone if no mate is found for a while</label></div>
+  <div class="row"><label><input type="checkbox" id="immigration"> Immigration when the population drops below 10 (off by default: it never triggered in tests)</label></div>
+
+  <h2>Energy formula</h2>
+  <div class="row"><label><input type="radio" name="energyModel" value="classic" checked> Classic: resting ∝ body², moving ∝ body³ × speed², sensing ∝ sense</label></div>
+  <div class="row"><label><input type="radio" name="energyModel" value="realistic"> Realistic: resting ∝ body^2.25 (Kleiber), moving ∝ body² × speed, sensing ∝ sense²</label></div>
+  <p class="note">Both cost the same for an average adult at top speed. Press Reset after switching for a clean comparison.</p>
+
+  <h2>Seasons</h2>
+  <div class="row"><label><input type="checkbox" id="seasons"> Seasons: plant growth rises and falls over a 2-minute year</label></div>
+  <p class="note" id="sSeason">Plant growth now: normal</p>
+
+  <h2>Genome layer</h2>
+  <div class="row"><label><input type="checkbox" id="linkage"> Linkage: genes on a chromosome, nearby genes inherited together</label></div>
+  <div class="row"><label><input type="checkbox" id="regulation"> Regulation: genes that switch other genes up or down</label></div>
+  <div class="row"><label><input type="checkbox" id="duplication"> Duplication: genes can be copied and drift</label></div>
+  <p class="note">Off by default in v6, because the balance was tuned with them off. Changes apply to new births; press Reset for a clean comparison.</p>
+
+  <h2>Data</h2>
+  <div class="btns"><button id="btnCopy">Copy log as CSV</button><span id="copyMsg" class="note" style="align-self:center"></span></div>
+</main>
+
+<script>
+/* =====================================================================
+   CONFIG — the "physics". No species, diets or behaviours are declared.
+   ===================================================================== */
+
+const WORLD_W = 380, WORLD_H = 280;
+const PLANT_CELL = 10;            // plant grid resolution (px)
+const HASH_CELL = 40;             // spatial hash bucket (px)
+const MAX_AGENTS = 900;
+const TICKS_PER_SEC = 60;
+const LOG_EVERY = 60;             // ticks between log samples
+const SPECIES_EVERY = 120;        // ticks between species detection passes
+
+const START_COUNT = 120;
+const START_ENERGY = 60;
+const BREED_ENERGY = 120;         // × size: energy needed before looking for a mate
+const METABOLISM = 0.03;          // × body²: resting cost per tick (big bodies cost more just to exist)
+const MOVE_COST = 0.04;           // × size³ × (velocity/1.2)²
+const SENSE_COST = 0.02;          // × sense
+const SPEED_UPKEEP = 0.005;       // × speed gene, every tick: the cost of maintaining muscle even at rest (v5: 0)
+const PLANT_ENERGY = 20;          // energy per unit of plant biomass eaten (× plant efficiency)
+
+// Energy model switch: 'classic' (above, used in v1–v5) or 'realistic' (below).
+// The realistic model is matched to classic for a body-1, sense-1 organism at top speed (both cost 0.09),
+// but scales the way measurements of real animals suggest:
+//   resting ∝ body^2.25        Kleiber's law: metabolism ∝ mass^0.75, and mass ∝ length³
+//   moving  ∝ body² × speed    running animals' energy per second rises roughly linearly with speed
+//   sensing ∝ sense²           big senses and brains are disproportionately expensive
+const REAL_METABOLISM = 0.03, REAL_RESTING_EXP = 2.25;
+const REAL_MOVE_COST = 0.04, REAL_MOVE_BODY_EXP = 2;
+const REAL_SENSE_COST = 0.02, REAL_SENSE_EXP = 2;
+
+const DIGEST_MAX = 0.7;           // best possible digestion efficiency
+const TRADEOFF = 1.0;             // >1 makes generalists worse at both foods, <1 better (1 = linear)
+const MIN_MEAT = 0.15;            // below this meat efficiency, ignore carcasses
+const MIN_HUNT = 0.3;             // below this meat efficiency, never attack live prey (scavenge only)
+const SIZE_EDGE = 1.3;            // attacker must be this many times bigger than its target
+const KIN_DISTANCE = 0.15;       // genomes closer than this are treated as family and never eaten
+const HANDLING_TIME = 150;        // ticks spent digesting after a kill
+const CARCASS_VALUE = 80;         // × prey size, energy in a body on top of its stored energy
+
+const ROOT_FLOOR = 0.03;          // grazing leaves this much plant behind
+const COVER_LEVEL = 0.6;          // plant biomass that hides an organism...
+const COVER_RANGE = 12;           // ...unless the hunter is this close (px)
+
+const MATE_GIFT = 0.3;            // fraction of each parent's energy given to the child
+const MATE_COOLDOWN = 200;        // ticks between matings
+const ASEXUAL_AFTER = 600;        // ticks ready-but-mateless before cloning (if enabled)
+const MARKER_DRIFT = 0.5;         // marker mutation size relative to the mutation rate
+
+// Growth: newborns are small and grow toward their adult size gene
+const BIRTH_FRACTION = 0.4;       // body size at birth, as a fraction of adult size
+const GROWTH_RATE = 0.0008;       // × adult size: body growth per tick while fed
+const GROWTH_COST = 40;           // energy per unit of body size grown
+const ADULT_AT = 0.95;            // fraction of adult size at which breeding is allowed
+
+// Ageing: lifespan is a gene; a longer life costs more upkeep (repair)
+const BASE_LIFESPAN = 10000;      // ticks, × lifespan gene; old age should be a rare way to die in the wild (v4–v5: 5000)
+const LIFESPAN_UPKEEP = 1.0;      // resting cost × lifespan gene: a longer-lived body costs proportionally more to maintain (v4–v5: 0.25)
+const BASE_HAZARD = 0.00001;      // chance per tick of dying at age 0...
+const SENESCENCE = 6;             // ...rising × e^(SENESCENCE × age / lifespan) (Gompertz curve)
+
+// Bad genes: harmful mutations at 24 loci; each one carried adds a small chance of dying
+const LOAD_LOCI = 24;
+const LOAD_RATE = 0.1;            // chance a newborn gets one new harmful mutation, at 10% mutation (v4–v6: 0.3)
+const LOAD_REVERT = 0;            // chance per birth that each carried harmful mutation is repaired (back or compensatory mutation)
+const LOAD_EXP = 2;               // each extra harmful mutation hurts more than the last (synergistic), so selection removes them before they pile up (v4–v6: 1)
+const LOAD_HAZARD = 0.00001;      // added chance of death per tick per harmful mutation (v4–v5: 0.00004)
+
+// Carcasses: non-predation deaths leave a body that rots, feeds scavengers and fertilises plants
+const CARCASS_DECAY = 0.003;      // fraction of a carcass's energy lost per tick
+const CARCASS_FERTILISE = 0.002;  // plant biomass added per unit of energy rotted
+const SCAVENGE_BITE = 1.5;        // × body: carcass energy eaten per tick
+const MAX_CARCASSES = 300;
+
+// Hunting is a contest, not a sure thing
+const ESCAPE_FACTOR = 1.5;        // weight of the prey's speed in a hunt contest; equal speeds → 40% success (v4–v5: 0.8)
+const HUNT_BODY_EXP = 0;          // body size no longer counts in a hunt contest; speed decides it (v4–v5: 1)
+const FAIL_COOLDOWN = 30;         // ticks to recover after a failed attack
+const FAIL_COST = 2;              // energy lost in a failed attack
+
+// Genome layer (v5): linkage, regulation, duplication. With all three switched off,
+// the simulation follows v4's code paths exactly and gives identical results.
+const LOCUS_SPACING = 10;         // chromosome distance between neighbouring primary genes
+const TANDEM_GAP = 1;             // a duplicate lands this close to its source, so it is tightly linked
+const DUP_RATE = 0.05;            // chance per birth (at 10% mutation) of duplicating a random gene
+const REG_RATE = 0.05;            // chance per birth of a brand-new regulatory gene
+const DEL_RATE = 0.03;            // chance per birth of deleting a random extra gene
+const REG_STRENGTH = 0.2;         // starting strength range (±) of a new regulator
+const GENOME_COST = 0.0005;       // energy per tick per extra gene carried
+const MAX_EXTRA_LOCI = 24;
+const SEASON_LENGTH = 7200;       // ticks per full year (summer → winter → summer)
+const SEASON_AMPLITUDE = 0.8;     // plant growth swings between (1 − this) and (1 + this) × normal
+const HUNGRY_ENERGY = 40;         // below this energy, the "hungry" condition is on
+const FUNCTIONAL = ['speed', 'size', 'sense', 'lifespan', 'carnivory'];
+const CONDITIONS = ['juvenile', 'hungry', 'switch'];   // switch = marker gene m1 above 0
+
+/* =====================================================================
+   GENOME — one genome shape for every organism
+   ===================================================================== */
+
+// speed, size, sense, lifespan: multiplicative genes (1.0 = baseline); size = ADULT size
+// carnivory: 0..1, trades plant digestion against meat digestion
+// m1..m3: neutral markers. They do nothing except drift, like non-coding DNA,
+//         so isolated groups become genetically distinct over time.
+const GENES = ['speed', 'size', 'sense', 'lifespan', 'carnivory', 'm1', 'm2', 'm3'];
+
+const plantEff = g => DIGEST_MAX * (1 - g.carnivory) ** TRADEOFF;
+const meatEff  = g => DIGEST_MAX * g.carnivory ** TRADEOFF;
+
+function popcount(n) { let c = 0; while (n) { n &= n - 1; c++; } return c; }
+
+function geneticDistance(a, b) {
+  return Math.sqrt(
+    Math.log(a.speed / b.speed) ** 2 +
+    Math.log(a.size / b.size) ** 2 +
+    Math.log(a.sense / b.sense) ** 2 +
+    Math.log(a.lifespan / b.lifespan) ** 2 +
+    (2 * (a.carnivory - b.carnivory)) ** 2 +
+    (a.m1 - b.m1) ** 2 + (a.m2 - b.m2) ** 2 + (a.m3 - b.m3) ** 2);
+}
+
+/* =====================================================================
+   ENGINE — no drawing in here; could run headless or in a Web Worker
+   ===================================================================== */
+
+function mulberry32(seed) {
+  return function () {
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+class World {
+  constructor(seed) {
+    this.rand = mulberry32(seed);
+    this.tick = 0;
+    this.agents = [];
+    this.log = [];
+    this.species = [];           // every species ever detected (the family tree)
+    this.carcasses = [];
+    this.resetCounters();
+    // Lifetime totals since the start of the run (never reset)
+    this.totals = { founders: 0, added: 0, sexualBirths: 0, asexualBirths: 0, maxGeneration: 1,
+                    deaths: { starved: 0, eaten: 0, old: 0, genetic: 0 }, ageAtDeathSum: 0,
+                    huntAttempts: 0, huntSuccesses: 0, scavengeBites: 0 };
+    this.nextSpeciesId = 1;
+    this.params = { mutation: 0.10, plantGrowth: 0.012, mateThreshold: 0.6, asexual: true, immigration: false,
+                    energyModel: 'classic', seasons: false,
+                    linkage: false, regulation: false, duplication: false };
+    this.nextLocusId = 1;
+    this.initPlants();
+    this.spawnRandom(START_COUNT);
+    this.detectSpecies();
+  }
+
+  /* ---------- plants (same as v2) ---------- */
+  initPlants() {
+    this.cols = Math.ceil(WORLD_W / PLANT_CELL);
+    this.rows = Math.ceil(WORLD_H / PLANT_CELL);
+    const n = this.cols * this.rows;
+    this.biomass = new Float32Array(n);
+    this.capacity = new Float32Array(n);
+    const hills = Array.from({ length: 6 }, () => ({
+      x: this.rand() * WORLD_W, y: this.rand() * WORLD_H, s: 35 + this.rand() * 40 }));
+    for (let i = 0; i < n; i++) {
+      const x = (i % this.cols + 0.5) * PLANT_CELL, y = (Math.floor(i / this.cols) + 0.5) * PLANT_CELL;
+      let v = 0;
+      for (const h of hills) v += Math.exp(-((x - h.x) ** 2 + (y - h.y) ** 2) / (2 * h.s * h.s));
+      v = Math.min(1, v);
+      this.capacity[i] = v > 0.15 ? v : 0;
+      this.biomass[i] = this.capacity[i] * (0.3 + 0.5 * this.rand());
+    }
+  }
+
+  stepPlants() {
+    const { cols, rows, biomass, capacity } = this, r = this.params.plantGrowth * this.seasonFactor();
+    for (let i = 0; i < biomass.length; i++) {
+      const cap = capacity[i];
+      if (cap === 0) continue;
+      const b = biomass[i];
+      if (b > 0) biomass[i] = b + r * b * (1 - b / cap);
+      else {
+        const c = i % cols, rr = Math.floor(i / cols);
+        let nb = 0;
+        if (c > 0) nb += biomass[i - 1];
+        if (c < cols - 1) nb += biomass[i + 1];
+        if (rr > 0) nb += biomass[i - cols];
+        if (rr < rows - 1) nb += biomass[i + cols];
+        if (nb > 0 && this.rand() < r * nb) biomass[i] = 0.02;
+      }
+    }
+  }
+
+  // Plant growth multiplier for the current time of year (1 when seasons are off)
+  seasonFactor() {
+    if (!this.params.seasons) return 1;
+    return Math.max(0, 1 + SEASON_AMPLITUDE * Math.sin(2 * Math.PI * this.tick / SEASON_LENGTH));
+  }
+
+  cellAt(x, y) {
+    const c = Math.min(this.cols - 1, Math.max(0, Math.floor(x / PLANT_CELL)));
+    const r = Math.min(this.rows - 1, Math.max(0, Math.floor(y / PLANT_CELL)));
+    return r * this.cols + c;
+  }
+
+  bestPlantCell(a, radius) {
+    const cr = Math.ceil(radius / PLANT_CELL);
+    const c0 = Math.floor(a.x / PLANT_CELL), r0 = Math.floor(a.y / PLANT_CELL);
+    let best = null, bestScore = ROOT_FLOOR + 0.1;
+    for (let dr = -cr; dr <= cr; dr++) for (let dc = -cr; dc <= cr; dc++) {
+      const c = c0 + dc, r = r0 + dr;
+      if (c < 0 || r < 0 || c >= this.cols || r >= this.rows) continue;
+      const d = Math.hypot(dc, dr) * PLANT_CELL;
+      if (d > radius) continue;
+      const score = this.biomass[r * this.cols + c] - d * 0.002;
+      if (score > bestScore) { bestScore = score; best = { x: (c + 0.5) * PLANT_CELL, y: (r + 0.5) * PLANT_CELL }; }
+    }
+    return best;
+  }
+
+  /* ---------- genomes ---------- */
+  randomGenome() {
+    const r = () => this.rand();
+    return { speed: 0.8 + 0.4 * r(), size: 0.8 + 0.4 * r(), sense: 0.8 + 0.4 * r(), lifespan: 0.8 + 0.4 * r(),
+             carnivory: 0.3 * r(), m1: (r() - 0.5) * 0.2, m2: (r() - 0.5) * 0.2, m3: (r() - 0.5) * 0.2 };
+  }
+
+  mutate(g) {
+    const m = this.params.mutation, noise = () => this.rand() * 2 - 1;
+    const mult = v => Math.min(5, Math.max(0.2, v * (1 + noise() * m)));
+    return {
+      speed: mult(g.speed), size: mult(g.size), sense: mult(g.sense), lifespan: mult(g.lifespan),
+      carnivory: Math.min(1, Math.max(0, g.carnivory + noise() * m * 0.5)),
+      m1: g.m1 + noise() * m * MARKER_DRIFT, m2: g.m2 + noise() * m * MARKER_DRIFT, m3: g.m3 + noise() * m * MARKER_DRIFT,
+    };
+  }
+
+  // Sexual reproduction: each gene comes from one parent at random
+  recombine(a, b) {
+    const child = {};
+    for (const k of GENES) child[k] = this.rand() < 0.5 ? a[k] : b[k];
+    return child;
+  }
+
+  // Harmful mutations: sex shuffles them (children can carry fewer than either parent),
+  // cloning passes all of them on. A new one may appear in every birth.
+  inheritLoad(a, b) {
+    const full = (1 << LOAD_LOCI) - 1;
+    let load = a.load;
+    if (b) { const mask = Math.floor(this.rand() * (full + 1)); load = (a.load & mask) | (b.load & ~mask & full); }
+    if (this.rand() < LOAD_RATE * this.params.mutation / 0.1) load |= 1 << Math.floor(this.rand() * LOAD_LOCI);
+    if (LOAD_REVERT > 0) for (let i = 0; i < LOAD_LOCI; i++)
+      if ((load >> i) & 1 && this.rand() < LOAD_REVERT) load &= ~(1 << i);
+    return load;
+  }
+
+  compatible(a, b) { return geneticDistance(a.dna, b.dna) < this.params.mateThreshold; }
+  isKin(a, b) { return geneticDistance(a.dna, b.dna) < KIN_DISTANCE; }
+
+  /* ---------- genome layer (v5) ---------- */
+  // a.dna    = the primary gene values (the genotype, as in v4)
+  // a.genome = { recomb, extra }: recombination-rate gene + extra genes (copies and regulators),
+  //            each with a chromosome position. Primary genes sit at index × LOCUS_SPACING.
+  // a.genes  = the expressed phenotype that behaviour reads; equals a.dna unless regulators act.
+  // Knockout experiment: silence every regulator in a random share of organisms (inherited by their copies)
+  silenceRegulators(share) {
+    for (const a of this.agents) if (this.rand() < share)
+      for (const l of a.genome.extra) if (l.kind === 'reg') l.silent = true;
+  }
+
+  layerOn() { return this.params.linkage || this.params.regulation || this.params.duplication; }
+  newGenome() { return { recomb: 0.5, extra: [] }; }
+
+  express(a) {
+    if (!this.params.regulation || !a.genome.extra.length) return a.dna;
+    let out = null;
+    const juvenile = a.body < ADULT_AT * a.dna.size, hungry = a.energy < HUNGRY_ENERGY, sw = a.dna.m1 > 0;
+    for (const r of a.genome.extra) {
+      if (r.kind !== 'reg' || r.silent) continue;   // silenced regulators are inherited but do nothing
+      const on = r.condition === 'juvenile' ? juvenile : r.condition === 'hungry' ? hungry : sw;
+      if (!on) continue;
+      out = out || { ...a.dna };
+      let base = out[r.trait];
+      if (r.copy !== null) {                       // express a duplicate copy instead of the primary
+        const c = a.genome.extra.find(l => l.id === r.copy);
+        if (c) base = c.value;
+      }
+      out[r.trait] = r.trait === 'carnivory'
+        ? Math.min(1, Math.max(0, base + r.strength * 0.5))
+        : Math.min(5, Math.max(0.2, base * Math.exp(r.strength)));
+    }
+    return out || a.dna;
+  }
+
+  mutateValue(trait, v, m) {
+    const noise = this.rand() * 2 - 1;
+    if (trait === 'carnivory') return Math.min(1, Math.max(0, v + noise * m * 0.5));
+    if (trait === 'm1' || trait === 'm2' || trait === 'm3') return v + noise * m * MARKER_DRIFT;
+    return Math.min(5, Math.max(0.2, v * (1 + noise * m)));
+  }
+
+  // Child genotype from one parent (clone) or two (sex). With the layer off this is exactly v4.
+  inheritGenome(a, b) {
+    if (!this.layerOn()) {
+      return { dna: this.mutate(b ? this.recombine(a.dna, b.dna) : a.dna), genome: this.newGenome() };
+    }
+    const m = this.params.mutation;
+    let dna, extra, recomb;
+    if (!b) {
+      dna = { ...a.dna }; extra = a.genome.extra.map(l => ({ ...l })); recomb = a.genome.recomb;
+    } else {
+      // Crossover along the chromosome: walk every locus in position order, switching parent
+      // with a chance that grows with the distance from the previous locus.
+      const r = this.params.linkage ? (a.genome.recomb + b.genome.recomb) / 2 : 0.5;
+      const loci = GENES.map((k, i) => ({ pos: i * LOCUS_SPACING, prim: k }));
+      const seen = new Set();
+      for (const l of a.genome.extra.concat(b.genome.extra)) if (!seen.has(l.id)) { seen.add(l.id); loci.push({ pos: l.pos, id: l.id }); }
+      loci.sort((x, y) => x.pos - y.pos || (x.id || 0) - (y.id || 0));
+      let cur = this.rand() < 0.5 ? a : b, prev = null;
+      dna = {}; extra = [];
+      for (const l of loci) {
+        if (prev !== null) {
+          const p = this.params.linkage ? Math.min(0.5, r * (l.pos - prev) / LOCUS_SPACING) : 0.5;
+          if (this.rand() < p) cur = cur === a ? b : a;
+        }
+        prev = l.pos;
+        if (l.prim) dna[l.prim] = cur.dna[l.prim];
+        else { const g = cur.genome.extra.find(x => x.id === l.id); if (g) extra.push({ ...g }); }
+      }
+      recomb = (this.rand() < 0.5 ? a : b).genome.recomb;
+    }
+    // Point mutations
+    dna = this.mutate(dna);
+    for (const l of extra) {
+      if (l.kind === 'copy') l.value = this.mutateValue(l.trait, l.value, m);
+      else {
+        l.strength += (this.rand() * 2 - 1) * m;
+        if (this.rand() < 0.05) {                  // occasionally re-point at a different copy
+          const copies = extra.filter(c => c.kind === 'copy' && c.trait === l.trait);
+          l.copy = copies.length && this.rand() < 0.5 ? copies[Math.floor(this.rand() * copies.length)].id : null;
+        }
+      }
+    }
+    if (this.params.linkage) recomb = Math.min(0.5, Math.max(0.001, recomb + (this.rand() * 2 - 1) * m * 0.5));
+    // Structural mutations
+    const scale = m / 0.1;
+    if (this.params.duplication && extra.length < MAX_EXTRA_LOCI && this.rand() < DUP_RATE * scale) {
+      const k = Math.floor(this.rand() * (FUNCTIONAL.length + extra.length));
+      if (k < FUNCTIONAL.length) {
+        const t = FUNCTIONAL[k];
+        extra.push({ id: this.nextLocusId++, kind: 'copy', trait: t, value: dna[t],
+                     pos: GENES.indexOf(t) * LOCUS_SPACING + TANDEM_GAP * (0.1 + 0.9 * this.rand()) });
+      } else {
+        const src = extra[k - FUNCTIONAL.length];
+        extra.push({ ...src, id: this.nextLocusId++, pos: src.pos + TANDEM_GAP * (0.1 + 0.9 * this.rand()) });
+      }
+    }
+    if (this.params.regulation && extra.length < MAX_EXTRA_LOCI && this.rand() < REG_RATE * scale) {
+      const t = FUNCTIONAL[Math.floor(this.rand() * FUNCTIONAL.length)];
+      const copies = extra.filter(c => c.kind === 'copy' && c.trait === t);
+      extra.push({ id: this.nextLocusId++, kind: 'reg', trait: t,
+                   condition: CONDITIONS[Math.floor(this.rand() * CONDITIONS.length)],
+                   strength: (this.rand() * 2 - 1) * REG_STRENGTH,
+                   copy: copies.length && this.rand() < 0.5 ? copies[Math.floor(this.rand() * copies.length)].id : null,
+                   pos: this.rand() * (GENES.length - 1) * LOCUS_SPACING });
+    }
+    if (extra.length && this.rand() < DEL_RATE * scale) extra.splice(Math.floor(this.rand() * extra.length), 1);
+    return { dna, genome: { recomb, extra } };
+  }
+
+  /* ---------- agents ---------- */
+  makeAgent(x, y, genes, generation, speciesId, energy, load, body, genome) {
+    return { x, y, angle: this.rand() * Math.PI * 2, genes, dna: genes, genome, energy, age: 0, generation,
+             species: speciesId, digest: 0, mateCooldown: 0, waiting: 0, dead: false, cause: null,
+             load, body };
+  }
+
+  spawnRandom(count) {
+    for (let i = 0; i < count && this.agents.length < MAX_AGENTS; i++, this.tick === 0 ? this.totals.founders++ : this.totals.added++)
+    {
+      const g = this.randomGenome();   // immigrants and founders arrive as adults with clean genes
+      this.agents.push(this.makeAgent(this.rand() * WORLD_W, this.rand() * WORLD_H, g, 1, 0, START_ENERGY, 0, g.size, this.newGenome()));
+    }
+  }
+
+  radius(a) { return 3 * a.body + 2; }
+  isAdult(a) { return a.body >= ADULT_AT * a.genes.size; }
+  isHunter(a) { return meatEff(a.genes) > plantEff(a.genes); }
+
+  buildHash() {
+    this.hash = new Map();
+    for (const a of this.agents) {
+      const k = Math.floor(a.x / HASH_CELL) + Math.floor(a.y / HASH_CELL) * 1000;
+      let bucket = this.hash.get(k);
+      if (!bucket) this.hash.set(k, bucket = []);
+      bucket.push(a);
+    }
+  }
+
+  nearest(a, radius, test) {
+    const cx = Math.floor(a.x / HASH_CELL), cy = Math.floor(a.y / HASH_CELL);
+    const span = Math.ceil(radius / HASH_CELL);
+    let best = null, bestD = radius * radius;
+    for (let dy = -span; dy <= span; dy++) for (let dx = -span; dx <= span; dx++) {
+      const bucket = this.hash.get(cx + dx + (cy + dy) * 1000);
+      if (!bucket) continue;
+      for (const o of bucket) {
+        if (o === a || o.dead) continue;
+        const d = (o.x - a.x) ** 2 + (o.y - a.y) ** 2;
+        if (d < bestD && test(o, d)) { bestD = d; best = o; }
+      }
+    }
+    return best;
+  }
+
+  touching(a, o) {
+    const reach = this.radius(a) + this.radius(o);
+    return (o.x - a.x) ** 2 + (o.y - a.y) ** 2 < reach * reach;
+  }
+
+  stepAgent(a) {
+    const g = a.genes, pe = plantEff(g), me = meatEff(g);
+    const maxV = 1.2 * g.speed, senseR = 30 * g.sense;
+    let v = maxV * 0.5, fleeing = false, busy = false;
+    a.age++;
+    if (a.digest > 0) a.digest--;
+    if (a.mateCooldown > 0) a.mateCooldown--;
+    const ready = a.mateCooldown === 0 && this.isAdult(a) && a.energy > BREED_ENERGY * a.body;
+
+    // 1. Flee from a nearby hunter that is big enough to eat me and isn't close family
+    const threat = this.nearest(a, senseR, o =>
+      o.body > a.body * SIZE_EDGE && this.isHunter(o) && !this.isKin(a, o));
+    if (threat) {
+      a.angle = Math.atan2(a.y - threat.y, a.x - threat.x);
+      v = maxV; fleeing = busy = true;
+    }
+
+    // 2. Ready to breed: look for a ready, compatible partner
+    if (!busy && ready) {
+      const mate = this.nearest(a, Math.max(senseR * 1.5, 40), o =>
+        o.mateCooldown === 0 && this.isAdult(o) && o.energy > BREED_ENERGY * o.body && this.compatible(a, o));
+      if (mate) {
+        a.angle = Math.atan2(mate.y - a.y, mate.x - a.x);
+        v = maxV * 0.8; busy = true;
+        if (this.touching(a, mate)) this.mateWith(a, mate);
+      } else if (++a.waiting > ASEXUAL_AFTER && this.params.asexual) {
+        this.clone(a);
+      }
+    }
+
+    // 3. Meat: scavenge a carcass if one is in range, otherwise hunt.
+    //    Anything clearly smaller is prey if I can digest meat at all. (Close family is spared.)
+    if (!busy && a.digest === 0 && me > MIN_MEAT) {
+      // how far I'll go for meat grows smoothly with my meat preference, so there is no
+      // all-or-nothing jump between grazer and hunter for evolution to cross
+      const meatShare = me / (me + pe);
+      const huntR = this.radius(a) + 8 + senseR * meatShare;
+      const carcass = this.nearestCarcass(a, huntR);
+      if (carcass) {
+        a.angle = Math.atan2(carcass.y - a.y, carcass.x - a.x);
+        busy = true;
+        if ((carcass.x - a.x) ** 2 + (carcass.y - a.y) ** 2 < (this.radius(a) + 3) ** 2) {
+          const bite = Math.min(carcass.energy, SCAVENGE_BITE * a.body);
+          carcass.energy -= bite;
+          a.energy += bite * me;
+          v = maxV * 0.1;
+          this.counters.scavengeBites++;
+        } else v = maxV * 0.8;
+      } else {
+        const visible = (o, d2) => d2 < COVER_RANGE ** 2 || this.biomass[this.cellAt(o.x, o.y)] < COVER_LEVEL;
+        const prey = me < MIN_HUNT ? null : this.nearest(a, huntR, (o, d2) =>
+          a.body > o.body * SIZE_EDGE && visible(o, d2) && !this.isKin(a, o));
+        if (prey) {
+          a.angle = Math.atan2(prey.y - a.y, prey.x - a.x);
+          v = maxV; busy = true;
+          if (this.touching(a, prey)) {
+            // a contest: my body × speed against the prey's, so many hunts fail
+            this.counters.huntAttempts++;
+            const attack = a.body ** HUNT_BODY_EXP * g.speed;
+            const escape = prey.body ** HUNT_BODY_EXP * prey.genes.speed * ESCAPE_FACTOR;
+            if (this.rand() < attack / (attack + escape)) {
+              a.energy += (Math.max(0, prey.energy) + CARCASS_VALUE * prey.body) * me;
+              prey.dead = true; prey.cause = 'eaten';
+              a.digest = HANDLING_TIME;
+              this.counters.huntSuccesses++;
+            } else { a.digest = FAIL_COOLDOWN; a.energy -= FAIL_COST; }
+          }
+        }
+      }
+    }
+
+    // 4. Graze
+    if (!busy && pe > 0.01) {
+      const here = this.biomass[this.cellAt(a.x, a.y)];
+      if (here > ROOT_FLOOR + 0.1) { v = maxV * 0.1; a.angle += (this.rand() - 0.5) * 0.6; }
+      else {
+        const target = this.bestPlantCell(a, senseR);
+        if (target) { a.angle = Math.atan2(target.y - a.y, target.x - a.x); v = maxV * 0.8; }
+        else a.angle += (this.rand() - 0.5) * 0.4;
+      }
+    } else if (!busy) a.angle += (this.rand() - 0.5) * 0.4;
+
+    // Eat plants underfoot unless fleeing
+    if (!fleeing && pe > 0.01) {
+      const i = this.cellAt(a.x, a.y);
+      const bite = Math.max(0, Math.min(this.biomass[i] - ROOT_FLOOR, 0.008 * a.body));
+      this.biomass[i] -= bite;
+      a.energy += bite * PLANT_ENERGY * pe;
+    }
+
+    // Move and bounce
+    a.x += Math.cos(a.angle) * v;
+    a.y += Math.sin(a.angle) * v;
+    if (a.x < 0 || a.x > WORLD_W) { a.angle = Math.PI - a.angle; a.x = Math.max(0, Math.min(WORLD_W, a.x)); }
+    if (a.y < 0 || a.y > WORLD_H) { a.angle = -a.angle;          a.y = Math.max(0, Math.min(WORLD_H, a.y)); }
+
+    // Grow toward adult size while there is spare energy
+    if (a.body < g.size && a.energy > 20) {
+      const grow = Math.min(GROWTH_RATE * g.size, g.size - a.body);
+      a.body += grow;
+      a.energy -= grow * GROWTH_COST;
+    }
+
+    // Energy bill (longer-lived genomes pay more upkeep)
+    const upkeep = 1 - LIFESPAN_UPKEEP + LIFESPAN_UPKEEP * g.lifespan;
+    if (this.params.energyModel === 'realistic') {
+      a.energy -= REAL_METABOLISM * a.body ** REAL_RESTING_EXP * upkeep
+                + REAL_MOVE_COST * a.body ** REAL_MOVE_BODY_EXP * (v / 1.2)
+                + REAL_SENSE_COST * g.sense ** REAL_SENSE_EXP
+                + GENOME_COST * a.genome.extra.length + SPEED_UPKEEP * g.speed;
+    } else {
+      a.energy -= METABOLISM * a.body ** 2 * upkeep + MOVE_COST * a.body ** 3 * (v / 1.2) ** 2 + SENSE_COST * g.sense
+                + GENOME_COST * a.genome.extra.length + SPEED_UPKEEP * g.speed;
+    }
+
+    // Death: starvation, old age (Gompertz), or bad genes
+    const lifespan = BASE_LIFESPAN * g.lifespan;
+    if (a.dead) return;
+    if (a.energy <= 0) { a.dead = true; a.cause = 'starved'; }
+    else if (a.age > 4 * lifespan || this.rand() < BASE_HAZARD * Math.exp(SENESCENCE * a.age / lifespan)) { a.dead = true; a.cause = 'old'; }
+    else if (this.rand() < LOAD_HAZARD * popcount(a.load) ** LOAD_EXP) { a.dead = true; a.cause = 'genetic'; }
+  }
+
+  nearestCarcass(a, radius) {
+    let best = null, bestD = radius * radius;
+    for (const c of this.carcasses) {
+      const d = (c.x - a.x) ** 2 + (c.y - a.y) ** 2;
+      if (d < bestD) { bestD = d; best = c; }
+    }
+    return best;
+  }
+
+  stepCarcasses() {
+    for (const c of this.carcasses) {
+      const rot = c.energy * CARCASS_DECAY;
+      c.energy -= rot;
+      const i = this.cellAt(c.x, c.y);
+      if (this.capacity[i] > 0) this.biomass[i] = Math.min(this.capacity[i], this.biomass[i] + rot * CARCASS_FERTILISE);
+    }
+    this.carcasses = this.carcasses.filter(c => c.energy > 1);
+  }
+
+  mateWith(a, b) {
+    if (this.agents.length + this.babies.length >= MAX_AGENTS) return;
+    const gift = MATE_GIFT * a.energy + MATE_GIFT * b.energy;
+    a.energy *= 1 - MATE_GIFT; b.energy *= 1 - MATE_GIFT;
+    a.mateCooldown = b.mateCooldown = MATE_COOLDOWN;
+    a.waiting = b.waiting = 0;
+    const { dna, genome } = this.inheritGenome(a, b);
+    this.babies.push(this.makeAgent((a.x + b.x) / 2, (a.y + b.y) / 2, dna,
+                                    Math.max(a.generation, b.generation) + 1, a.species, gift,
+                                    this.inheritLoad(a, b), dna.size * BIRTH_FRACTION, genome));
+    this.counters.sexualBirths++;
+    this.totals.sexualBirths++;
+    this.totals.maxGeneration = Math.max(this.totals.maxGeneration, Math.max(a.generation, b.generation) + 1);
+  }
+
+  clone(a) {
+    if (this.agents.length + this.babies.length >= MAX_AGENTS) return;
+    a.energy /= 2; a.waiting = 0; a.mateCooldown = MATE_COOLDOWN;
+    const { dna, genome } = this.inheritGenome(a, null);
+    this.babies.push(this.makeAgent(a.x, a.y, dna, a.generation + 1, a.species, a.energy,
+                                    this.inheritLoad(a, null), dna.size * BIRTH_FRACTION, genome));
+    this.counters.asexualBirths++;
+    this.totals.asexualBirths++;
+    this.totals.maxGeneration = Math.max(this.totals.maxGeneration, a.generation + 1);
+  }
+
+  immigrate() {
+    if (this.agents.length < 10 && this.rand() < 1 / 120) this.spawnRandom(1);
+  }
+
+  /* ---------- species detection: cluster genomes, keep identities over time ---------- */
+  detectSpecies() {
+    const T = this.params.mateThreshold;
+    const alive = this.species.filter(s => s.died === null);
+    const fresh = [];                       // species founded this pass
+    const members = new Map();
+    for (const a of this.agents) {
+      let best = null, bestD = T;
+      for (const s of alive) {
+        const d = geneticDistance(a.dna, s.centroid);
+        if (d < bestD) { bestD = d; best = s; }
+      }
+      if (!best) {
+        for (const s of fresh) {
+          const d = geneticDistance(a.dna, s.centroid);
+          if (d < bestD) { bestD = d; best = s; }
+        }
+      }
+      if (!best) {
+        // a new species: its parent is whatever species this organism's lineage belonged to
+        best = { id: this.nextSpeciesId++, parent: a.species || null, born: this.tick, died: null,
+                 centroid: { ...a.dna }, count: 0, history: [] };
+        fresh.push(best);
+        this.species.push(best);
+      }
+      a.species = best.id;
+      if (!members.has(best)) members.set(best, []);
+      members.get(best).push(a);
+    }
+    for (const s of this.species) {
+      if (s.died !== null) continue;
+      const list = members.get(s) || [];
+      s.count = list.length;
+      if (!list.length) { s.died = this.tick; continue; }
+      for (const k of GENES) s.centroid[k] = list.reduce((sum, a) => sum + a.dna[k], 0) / list.length;
+      s.history.push({ t: this.tick, n: list.length });
+      if (s.history.length > 600) s.history.splice(0, s.history.length - 600);
+    }
+  }
+
+  step() {
+    this.tick++;
+    this.stepPlants();
+    this.stepCarcasses();
+    this.buildHash();
+    this.babies = [];
+    for (const a of this.agents) a.genes = this.params.regulation ? this.express(a) : a.dna;
+    for (const a of this.agents) if (!a.dead) this.stepAgent(a);
+    for (const a of this.agents) {
+      if (!a.dead) continue;
+      this.counters.deaths[a.cause]++;
+      this.totals.deaths[a.cause]++;
+      this.totals.ageAtDeathSum += a.age;
+      if (a.cause !== 'eaten') this.carcasses.push({ x: a.x, y: a.y, energy: CARCASS_VALUE * a.body });
+    }
+    if (this.carcasses.length > MAX_CARCASSES) this.carcasses.splice(0, this.carcasses.length - MAX_CARCASSES);
+    this.agents = this.agents.filter(a => !a.dead).concat(this.babies);
+    if (this.params.immigration) this.immigrate();
+    if (this.tick % SPECIES_EVERY === 0) this.detectSpecies();
+    if (this.tick % LOG_EVERY === 0) this.record();
+  }
+
+  /* ---------- logging ---------- */
+  resetCounters() {
+    this.counters = { sexualBirths: 0, asexualBirths: 0, huntAttempts: 0, huntSuccesses: 0, scavengeBites: 0,
+                      deaths: { starved: 0, eaten: 0, old: 0, genetic: 0 } };
+  }
+
+  record() {
+    const n = this.agents.length || 1, avg = k => this.agents.reduce((s, a) => s + a.dna[k], 0) / n;
+    const c = this.counters, T = this.totals;
+    T.huntAttempts += c.huntAttempts; T.huntSuccesses += c.huntSuccesses; T.scavengeBites += c.scavengeBites;
+    const totalDied = T.deaths.starved + T.deaths.eaten + T.deaths.old + T.deaths.genetic;
+    let copies = 0, regs = 0, recomb = 0;
+    const regBy = { juvenile: 0, hungry: 0, switch: 0 };
+    for (const a of this.agents) {
+      recomb += a.genome.recomb;
+      for (const l of a.genome.extra) { if (l.kind === 'copy') copies++; else { regs++; regBy[l.condition]++; } }
+    }
+    this.log.push({
+      t: this.tick, organisms: this.agents.length,
+      juveniles: this.agents.filter(a => !this.isAdult(a)).length,
+      hunters: this.agents.filter(a => this.isHunter(a)).length,
+      speciesAlive: this.species.filter(s => s.died === null).length,
+      speciesEver: this.species.length,
+      plants: this.biomass.reduce((s, b) => s + b, 0),
+      carcasses: this.carcasses.length,
+      speed: avg('speed'), size: avg('size'), sense: avg('sense'), lifespan: avg('lifespan'), carnivory: avg('carnivory'),
+      load: this.agents.reduce((s, a) => s + popcount(a.load), 0) / n,
+      sexualBirths: c.sexualBirths, asexualBirths: c.asexualBirths,
+      huntAttempts: c.huntAttempts, huntSuccesses: c.huntSuccesses, scavengeBites: c.scavengeBites,
+      diedStarved: c.deaths.starved, diedEaten: c.deaths.eaten, diedOld: c.deaths.old, diedGenetic: c.deaths.genetic,
+      copies: copies / n, regulators: regs / n, recomb: recomb / n,
+      regJuvenile: regBy.juvenile / n, regHungry: regBy.hungry / n, regSwitch: regBy.switch / n,
+      season: this.seasonFactor(),
+      totalBorn: T.sexualBirths + T.asexualBirths, totalDied, maxGeneration: T.maxGeneration,
+      meanGeneration: this.agents.reduce((s, a) => s + a.generation, 0) / n,
+    });
+    this.resetCounters();
+    if (this.log.length > 20000) this.log.shift();
+  }
+
+  toCSV() {
+    const cols = ['t', 'organisms', 'juveniles', 'hunters', 'speciesAlive', 'speciesEver', 'plants', 'carcasses',
+                  'speed', 'size', 'sense', 'lifespan', 'carnivory', 'load', 'sexualBirths', 'asexualBirths',
+                  'huntAttempts', 'huntSuccesses', 'scavengeBites', 'diedStarved', 'diedEaten', 'diedOld', 'diedGenetic',
+                  'copies', 'regulators', 'recomb', 'regJuvenile', 'regHungry', 'regSwitch',
+                  'totalBorn', 'totalDied', 'maxGeneration', 'meanGeneration', 'season'];
+    const fmt = v => Number.isInteger(v) ? v : v.toFixed(3);
+    return [cols.join(','), ...this.log.map(r => cols.map(c => fmt(r[c])).join(','))].join('\n');
+  }
+}
+
+/* =====================================================================
+   RENDERING + UI — reads the world, never changes the rules
+   ===================================================================== */
+
+const $ = id => document.getElementById(id);
+const dpr = window.devicePixelRatio || 1;
+function setupCanvas(id) {
+  const cv = $(id), w = cv.width, h = cv.height;
+  cv.width = w * dpr; cv.height = h * dpr;
+  const ctx = cv.getContext('2d'); ctx.scale(dpr, dpr);
+  return { ctx, w, h };
+}
+const worldView = setupCanvas('world'), treeView = setupCanvas('treeChart'),
+      scatterView = setupCanvas('scatterChart'), popView = setupCanvas('popChart');
+const inkColor = () => getComputedStyle(document.body).getPropertyValue('--ink').trim() || '#2c2c2a';
+const speciesColor = id => `hsl(${(id * 137.508) % 360}, 65%, 52%)`;
+
+let world, running = true;
+
+function reset() { world = new World(+$('seed').value || 1); readParams(); window.world = world; }
+
+function readParams() {
+  world.params.mutation = +$('mutation').value / 100;
+  world.params.plantGrowth = +$('growth').value / 1000;
+  world.params.mateThreshold = +$('mateThreshold').value / 100;
+  world.params.asexual = $('asexual').checked;
+  world.params.immigration = $('immigration').checked;
+  world.params.seasons = $('seasons').checked;
+  world.params.energyModel = document.querySelector('input[name=energyModel]:checked').value;
+  world.params.linkage = $('linkage').checked;
+  world.params.regulation = $('regulation').checked;
+  world.params.duplication = $('duplication').checked;
+}
+
+function drawWorld() {
+  const { ctx, w, h } = worldView, ink = inkColor();
+  ctx.clearRect(0, 0, w, h);
+  for (let i = 0; i < world.biomass.length; i++) {
+    const b = world.biomass[i];
+    if (b <= 0) continue;
+    ctx.fillStyle = `rgba(99,153,34,${(0.1 + b * 0.55).toFixed(2)})`;
+    ctx.fillRect((i % world.cols) * PLANT_CELL, Math.floor(i / world.cols) * PLANT_CELL, PLANT_CELL, PLANT_CELL);
+  }
+  ctx.fillStyle = 'rgba(133,79,11,0.75)';
+  for (const c of world.carcasses) ctx.fillRect(c.x - 2, c.y - 2, 4, 4);
+  for (const a of world.agents) {
+    ctx.fillStyle = speciesColor(a.species);
+    ctx.beginPath(); ctx.arc(a.x, a.y, world.radius(a), 0, Math.PI * 2); ctx.fill();
+    if (world.isHunter(a)) { ctx.strokeStyle = ink; ctx.lineWidth = 1.5; ctx.stroke(); }
+  }
+}
+
+function drawTree() {
+  const { ctx, w, h } = treeView, ink = inkColor();
+  ctx.clearRect(0, 0, w, h);
+  const now = world.tick, t0 = Math.max(0, now - 60 * TICKS_PER_SEC * 10);   // last 10 sim-minutes
+  const shown = world.species.filter(s => (s.died === null || s.died > t0) && s.history.length);
+  const list = shown.slice(-24);
+  if (!list.length) return;
+  const rowH = (h - 16) / list.length, X = t => 8 + (Math.max(t, t0) - t0) / Math.max(1, now - t0) * (w - 40);
+  const rowOf = new Map(list.map((s, i) => [s.id, i]));
+  const Y = i => 8 + rowH * (i + 0.5);
+  list.forEach((s, i) => {
+    const parentRow = rowOf.get(s.parent);
+    if (parentRow !== undefined && s.born > t0) {
+      ctx.strokeStyle = 'rgba(136,135,128,0.6)'; ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(X(s.born), Y(parentRow)); ctx.lineTo(X(s.born), Y(i)); ctx.stroke();
+    }
+    ctx.fillStyle = speciesColor(s.id);
+    for (let k = 0; k < s.history.length; k++) {
+      const p = s.history[k], next = s.history[k + 1];
+      if (p.t < t0) continue;
+      const x0 = X(p.t), x1 = next ? X(next.t) : X(s.died ?? now);
+      const th = Math.min(rowH - 1, 1 + Math.log2(p.n + 1) * 1.6);
+      ctx.fillRect(x0, Y(i) - th / 2, Math.max(1, x1 - x0), th);
+    }
+    if (s.died === null) {
+      ctx.fillStyle = ink; ctx.font = '10px system-ui'; ctx.textAlign = 'left';
+      ctx.fillText(s.count, w - 30, Y(i) + 3);
+    }
+  });
+}
+
+function drawScatter() {
+  const { ctx, w, h } = scatterView, pad = 8;
+  ctx.clearRect(0, 0, w, h);
+  ctx.strokeStyle = 'rgba(136,135,128,0.4)'; ctx.setLineDash([3, 3]);
+  const xm = pad + 0.5 * (w - 2 * pad);
+  ctx.beginPath(); ctx.moveTo(xm, 0); ctx.lineTo(xm, h); ctx.stroke(); ctx.setLineDash([]);
+  for (const a of world.agents) {
+    const x = pad + a.genes.carnivory * (w - 2 * pad);
+    const y = h - pad - Math.min(a.genes.size, 3) / 3 * (h - 2 * pad);
+    ctx.fillStyle = speciesColor(a.species);
+    ctx.fillRect(x - 2, y - 2, 4, 4);
+  }
+}
+
+function drawPop() {
+  const { ctx, w, h } = popView, pad = 6, recent = world.log.slice(-300);
+  ctx.clearRect(0, 0, w, h);
+  const series = [
+    ['#639922', recent.map(r => r.plants)], ['#888780', recent.map(r => r.organisms)],
+    ['#D85A30', recent.map(r => r.hunters)], ['#7F77DD', recent.map(r => r.speciesAlive)]];
+  for (const [color, vals] of series) {
+    const max = Math.max(1, ...vals);
+    ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.beginPath();
+    vals.forEach((v, i) => {
+      const x = i / Math.max(1, vals.length - 1) * w, y = h - pad - v / max * (h - 2 * pad);
+      i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    });
+    ctx.stroke();
+  }
+}
+
+function drawStats() {
+  const alive = world.species.filter(s => s.died === null).length;
+  $('sPop').textContent = world.agents.length;
+  $('sSpecies').textContent = `${alive} / ${world.species.length}`;
+  $('sHunters').textContent = world.agents.filter(a => world.isHunter(a)).length;
+  $('sTime').textContent = Math.floor(world.tick / TICKS_PER_SEC) + 's';
+  const recent = world.log.slice(-30), sum = k => recent.reduce((s, r) => s + r[k], 0);
+  const attempts = sum('huntAttempts');
+  $('sHunt').textContent = attempts ? `${Math.round(100 * sum('huntSuccesses') / attempts)}% of ${attempts}` : 'no hunts';
+  $('sLife').textContent = (world.agents.reduce((s, a) => s + a.genes.lifespan, 0) / (world.agents.length || 1)).toFixed(2);
+  const last = world.log.at(-1);
+  if (last) {
+    $('sExtra').textContent = `${last.copies.toFixed(1)} copies · ${last.regulators.toFixed(1)} reg`;
+    $('sRecomb').textContent = last.recomb.toFixed(2);
+    $('sGenome').textContent = `Regulators per organism by condition: juvenile ${last.regJuvenile.toFixed(2)} · hungry ${last.regHungry.toFixed(2)} · switch (m1 > 0) ${last.regSwitch.toFixed(2)}`;
+  }
+  const sf = world.seasonFactor();
+  $('sSeason').textContent = world.params.seasons
+    ? `Plant growth now: ${Math.round(sf * 100)}% of normal (${['spring', 'summer', 'autumn', 'winter'].at(Math.floor(((world.tick / SEASON_LENGTH + 0.125) % 1) * 4))})`
+    : 'Plant growth now: normal (seasons off)';
+  const T = world.totals, born = T.sexualBirths + T.asexualBirths;
+  const died = T.deaths.starved + T.deaths.eaten + T.deaths.old + T.deaths.genetic;
+  const pct = k => died ? Math.round(100 * T.deaths[k] / died) + '%' : '0%';
+  const meanGen = world.agents.reduce((s, a) => s + a.generation, 0) / (world.agents.length || 1);
+  $('tEver').textContent = (T.founders + T.added + born).toLocaleString('en-US');
+  $('tDied').textContent = died.toLocaleString('en-US');
+  $('tGen').textContent = `${T.maxGeneration} / ${meanGen.toFixed(0)}`;
+  $('tAge').textContent = died ? `${(T.ageAtDeathSum / died / TICKS_PER_SEC).toFixed(0)} s` : '–';
+  $('tBirths').textContent = `${T.sexualBirths.toLocaleString('en-US')} / ${T.asexualBirths.toLocaleString('en-US')}`;
+  $('tKills').textContent = T.huntAttempts ? `${T.huntSuccesses.toLocaleString('en-US')} (${Math.round(100 * T.huntSuccesses / T.huntAttempts)}%)` : '0';
+  $('tCauses').textContent = `Deaths by cause since the start: starved ${pct('starved')} · eaten ${pct('eaten')} · old age ${pct('old')} · bad genes ${pct('genetic')}. Founders ${T.founders}, added later ${T.added}.`;
+  $('sDeaths').textContent = `Deaths in the last 30 s: starved ${sum('diedStarved')} · eaten ${sum('diedEaten')} · old age ${sum('diedOld')} · bad genes ${sum('diedGenetic')} · scavenging bites ${sum('scavengeBites')}`;
+}
+
+$('btnPlay').onclick = () => { running = !running; $('btnPlay').textContent = running ? 'Pause' : 'Play'; };
+$('btnReset').onclick = reset;
+$('btnAdd').onclick = () => world.spawnRandom(20);
+$('speed').oninput = e => $('speedOut').textContent = e.target.value + 'x';
+$('mutation').oninput = e => { $('mutationOut').textContent = e.target.value + '%'; readParams(); };
+$('growth').oninput = e => { $('growthOut').textContent = e.target.value; readParams(); };
+$('mateThreshold').oninput = e => { $('mateThresholdOut').textContent = (e.target.value / 100).toFixed(2); readParams(); };
+$('asexual').onchange = readParams;
+$('immigration').onchange = readParams;
+['linkage', 'regulation', 'duplication'].forEach(id => $(id).onchange = readParams);
+document.querySelectorAll('input[name=energyModel]').forEach(el => el.onchange = readParams);
+$('seasons').onchange = readParams;
+$('btnCopy').onclick = async () => {
+  try { await navigator.clipboard.writeText(world.toCSV()); $('copyMsg').textContent = `Copied ${world.log.length} rows`; }
+  catch { $('copyMsg').textContent = 'Clipboard not available here'; }
+};
+
+let frame = 0;
+function loop() {
+  if (running) for (let i = 0; i < +$('speed').value; i++) world.step();
+  drawWorld(); drawStats();
+  if (frame++ % 6 === 0) { drawTree(); drawScatter(); drawPop(); }
+  requestAnimationFrame(loop);
+}
+
+reset();
+loop();
+</script>
+</body>
+</html>
