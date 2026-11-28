@@ -27,8 +27,8 @@ export function stepAgent(w: World, a: Agent) {
   const ready = a.mateCooldown === 0 && isAdult(w, a) && a.energy > C.BREED_ENERGY * a.body;
 
   // 1. Flee from a nearby hunter that is big enough to eat me and isn't close family
-  const threat = w.hash.nearest(a, senseR, o =>
-    o.body > a.body * C.SIZE_EDGE && isHunter(w, o) && !w.isKin(a, o));
+  const threat = w.hunterHash.nearest(a, senseR, o =>
+    o.body > a.body * C.SIZE_EDGE && o.hunter && !w.isKin(a, o));
   if (threat) {
     a.angle = Math.atan2(a.y - threat.y, a.x - threat.x);
     v = maxV; fleeing = busy = true;
