@@ -7,13 +7,16 @@
   "scripts": {
     "build": "tsc -p tsconfig.engine.json",
     "typecheck": "tsc -p tsconfig.engine.json --noEmit && tsc -p tsconfig.web.json --noEmit",
-    "test": "vitest run",
+    "test": "vitest run && python3 -m unittest analysis/test_summarise.py",
     "sim": "node dist/cli/run.js",
     "dev": "vite",
     "build:web": "vite build",
     "preview": "vite preview",
-    "baseline": "node scripts/run-matrix.mjs legacy test/baseline/v8-baseline.json",
-    "verify": "npm run build && node scripts/run-matrix.mjs port out/port-matrix.json --compare test/baseline/v8-baseline.json"
+    "baseline": "npm run build && node scripts/run-matrix.mjs legacy test/baseline/v8-baseline.json",
+    "verify": "npm run build && node scripts/run-matrix.mjs port out/port-matrix.json --compare test/baseline/v8-baseline.json",
+    "sweep": "node dist/cli/sweep.js",
+    "summarise": "python3 analysis/summarise.py",
+    "bench": "npm run build && node scripts/bench.mjs"
   },
   "devDependencies": {
     "@types/node": "^26.6.11",

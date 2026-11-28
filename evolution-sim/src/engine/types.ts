@@ -33,6 +33,7 @@ export interface Agent {
   dead: boolean; cause: DeathCause | null;
   load: number;            // harmful-mutation bitmask
   body: number;            // current body size
+  hunter: boolean;         // meat digestion beats plant digestion; set at the start of each tick
 }
 
 export interface Carcass { x: number; y: number; energy: number }

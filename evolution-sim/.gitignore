@@ -2,3 +2,5 @@ node_modules/
 dist/
 out/
 web-dist/
+sweeps/
+__pycache__/

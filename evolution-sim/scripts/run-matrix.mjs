@@ -2,10 +2,11 @@
 //   node scripts/run-matrix.mjs legacy  test/baseline/v8-baseline.json   (record the baseline from v8)
 //   node scripts/run-matrix.mjs port    out/port-matrix.json             (run the ported engine)
 // Add --compare test/baseline/v8-baseline.json to report any run that differs.
-import { Worker, isMainThread, parentPort, workerData } from 'node:worker_threads';
-import { availableParallelism } from 'node:os';
+// Uses the same worker pool as the sweep (dist/cli/pool.js), so run `npm run build` first.
 import { writeFileSync, readFileSync, mkdirSync } from 'node:fs';
 import { dirname } from 'node:path';
+import { isMainThread } from 'node:worker_threads';
+import { runPool, serveJobs } from '../dist/cli/pool.js';
 import { matrix, fingerprint, TICKS } from './matrix.mjs';
 
 async function runOne(engine, run, ticks) {
@@ -19,14 +20,13 @@ async function runOne(engine, run, ticks) {
   return world;
 }
 
-if (!isMainThread) {
-  const { engine, ticks } = workerData;
-  parentPort.on('message', async run => {
-    const t = Date.now();
-    const world = await runOne(engine, run, ticks);
-    parentPort.postMessage({ key: run.key, ...fingerprint(world), seconds: (Date.now() - t) / 1000 });
-  });
-} else {
+serveJobs(async ({ engine, ticks, run }) => {
+  const t = Date.now();
+  const world = await runOne(engine, run, ticks);
+  return { key: run.key, ...fingerprint(world), seconds: (Date.now() - t) / 1000 };
+});
+
+if (isMainThread) {
   const args = process.argv.slice(2);
   const engine = args[0], out = args[1];
   const flag = name => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : null; };
@@ -38,24 +38,15 @@ if (!isMainThread) {
     process.exit(2);
   }
   // biggest worlds first, so the long runs don't finish last on their own
-  const queue = matrix().filter(r => !only || r.key.includes(only)).sort((a, b) => b.scale - a.scale);
-  const results = {};
-  const threads = Math.min(availableParallelism(), queue.length);
-  let done = 0;
+  const runs = matrix().filter(r => !only || r.key.includes(only)).sort((a, b) => b.scale - a.scale);
   const started = Date.now();
-  await Promise.all(Array.from({ length: threads }, () => new Promise(resolve => {
-    const w = new Worker(new URL(import.meta.url), { workerData: { engine, ticks } });
-    const next = () => { const r = queue.shift(); if (r) w.postMessage(r); else { w.terminate(); resolve(); } };
-    w.on('message', res => {
-      results[res.key] = res;
-      console.log(`[${++done}] ${res.key}  ${res.seconds.toFixed(0)} s  ${res.finalRow.split(',').slice(0, 6).join(',')}`);
-      next();
-    });
-    w.on('error', e => { console.error(e); process.exit(1); });
-    next();
-  })));
-  const sorted = Object.fromEntries(matrix().filter(r => results[r.key]).map(r => {
-    const { key, seconds, ...fp } = results[r.key]; return [key, fp];
+  const results = await runPool(runs.map(run => ({ engine, ticks, run })), new URL(import.meta.url), {
+    onResult: (res, _job, done) =>
+      console.log(`[${done}] ${res.key}  ${res.seconds.toFixed(0)} s  ${res.finalRow.split(',').slice(0, 6).join(',')}`),
+  });
+  const byKey = Object.fromEntries(results.map(r => [r.key, r]));
+  const sorted = Object.fromEntries(matrix().filter(r => byKey[r.key]).map(r => {
+    const { key, seconds, ...fp } = byKey[r.key]; return [key, fp];
   }));
   mkdirSync(dirname(out), { recursive: true });
   writeFileSync(out, JSON.stringify({ engine, ticks, runs: sorted }, null, 1) + '\n');

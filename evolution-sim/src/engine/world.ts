@@ -45,6 +45,7 @@ export class World {
   nextLocusId = 1;
   plants: Plants;
   hash: SpatialHash;
+  hunterHash: SpatialHash;     // hunters only, for the flee check
 
   constructor({ seed, scale = 1, params = {}, config = {} }: WorldOptions) {
     this.cfg = { ...DEFAULT_CONFIG, ...config };
@@ -54,7 +55,8 @@ export class World {
     this.height = Math.round(C.BASE_H * scale);
     this.maxAgents = Math.round(C.MAX_AGENTS * scale * scale);
     this.rand = mulberry32(seed);
-    this.hash = new SpatialHash(C.HASH_CELL);
+    this.hash = new SpatialHash(C.HASH_CELL, this.width, this.height);
+    this.hunterHash = new SpatialHash(C.HASH_CELL, this.width, this.height);
     this.resetCounters();
     // Lifetime totals since the start of the run (never reset)
     this.totals = { founders: 0, added: 0, sexualBirths: 0, asexualBirths: 0, maxGeneration: 1,
@@ -98,7 +100,15 @@ export class World {
     stepCarcasses(this);
     this.hash.build(this.agents);
     this.babies = [];
-    for (const a of this.agents) a.genes = this.params.regulation ? express(this, a) : a.dna;
+    // Expressed traits are fixed for the tick, so whether each organism digests meat better than
+    // plants is worked out once here instead of inside every neighbour search.
+    for (const a of this.agents) {
+      a.genes = this.params.regulation ? express(this, a) : a.dna;
+      a.hunter = isHunter(this, a);
+    }
+    // Only hunters can be a threat, so the flee check searches this smaller grid. It keeps the
+    // hunters in the same order as the full grid, so it finds the same organism.
+    this.hunterHash.build(this.agents.filter(a => a.hunter));
     for (const a of this.agents) if (!a.dead) stepAgent(this, a);
     collectDeaths(this);
     this.agents = this.agents.filter(a => !a.dead).concat(this.babies);

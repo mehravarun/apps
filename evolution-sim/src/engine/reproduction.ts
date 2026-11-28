@@ -7,7 +7,7 @@ export function makeAgent(w: World, x: number, y: number, genes: Genes, generati
                           energy: number, load: number, body: number, genome: Genome): Agent {
   return { x, y, angle: w.rand() * Math.PI * 2, genes, dna: genes, genome, energy, age: 0, generation,
            species: speciesId, digest: 0, mateCooldown: 0, waiting: 0, dead: false, cause: null,
-           load, body };
+           load, body, hunter: false };
 }
 
 export function spawnRandom(w: World, count: number) {

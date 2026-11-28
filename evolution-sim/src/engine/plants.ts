@@ -52,21 +52,38 @@ export class Plants {
     return r * this.cols + c;
   }
 
+  // Cell offsets within cr cells, in v8's scan order (row by row), with their distances in px.
+  // Corners beyond cr cells are left out: their distance exceeds any radius that rounds up to cr.
+  private offsets = new Map<number, Float64Array>();
+  private offsetsFor(cr: number, cellSize: number) {
+    let o = this.offsets.get(cr);
+    if (!o) {
+      const list: number[] = [];
+      for (let dr = -cr; dr <= cr; dr++) for (let dc = -cr; dc <= cr; dc++) {
+        const d = Math.hypot(dc, dr) * cellSize;
+        if (d <= cr * cellSize) list.push(dc, dr, d);
+      }
+      this.offsets.set(cr, o = Float64Array.from(list));
+    }
+    return o;
+  }
+
   // The best-scoring cell within the radius: most biomass, slightly discounted by distance
   bestCell(w: World, a: Agent, radius: number) {
-    const { PLANT_CELL, ROOT_FLOOR } = w.cfg;
+    const { PLANT_CELL, ROOT_FLOOR } = w.cfg, { cols, rows, biomass } = this;
     const cr = Math.ceil(radius / PLANT_CELL);
     const c0 = Math.floor(a.x / PLANT_CELL), r0 = Math.floor(a.y / PLANT_CELL);
-    let best: { x: number; y: number } | null = null, bestScore = ROOT_FLOOR + 0.1;
-    for (let dr = -cr; dr <= cr; dr++) for (let dc = -cr; dc <= cr; dc++) {
-      const c = c0 + dc, r = r0 + dr;
-      if (c < 0 || r < 0 || c >= this.cols || r >= this.rows) continue;
-      const d = Math.hypot(dc, dr) * PLANT_CELL;
+    const off = this.offsetsFor(cr, PLANT_CELL);
+    let bestC = -1, bestR = -1, bestScore = ROOT_FLOOR + 0.1;
+    for (let k = 0; k < off.length; k += 3) {
+      const d = off[k + 2];
       if (d > radius) continue;
-      const score = this.biomass[r * this.cols + c] - d * 0.002;
-      if (score > bestScore) { bestScore = score; best = { x: (c + 0.5) * PLANT_CELL, y: (r + 0.5) * PLANT_CELL }; }
+      const c = c0 + off[k], r = r0 + off[k + 1];
+      if (c < 0 || r < 0 || c >= cols || r >= rows) continue;
+      const score = biomass[r * cols + c] - d * 0.002;
+      if (score > bestScore) { bestScore = score; bestC = c; bestR = r; }
     }
-    return best;
+    return bestC < 0 ? null : { x: (bestC + 0.5) * PLANT_CELL, y: (bestR + 0.5) * PLANT_CELL };
   }
 }
 

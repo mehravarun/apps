@@ -1,11 +1,11 @@
-/* Headless runner.
+/* Headless runner for one run.
      node dist/cli/run.js --seed 42 --ticks 108000 --world 4 --energy realistic --seasons \
                           --genome-layer --set ESCAPE_FACTOR=1.5 --out run.csv
    Prints the log as CSV (to --out, or stdout) plus a one-line summary on stderr. */
 import { writeFileSync } from 'node:fs';
 import { parseArgs } from 'node:util';
-import { DEFAULT_CONFIG, DEFAULT_PARAMS, isConfigKey, isParamKey, type Config, type Params } from '../engine/config.js';
 import { World } from '../engine/world.js';
+import { SettingsError, checkSetting, splitAssignment, worldOptions, type Settings } from './settings.js';
 
 const HELP = `Usage: node dist/cli/run.js [options]
 
@@ -22,10 +22,9 @@ const HELP = `Usage: node dist/cli/run.js [options]
                        (mutation, plantGrowth, mateThreshold, asexual, immigration); repeatable
   --out FILE.csv       write the log here instead of stdout
   --quiet              no summary on stderr
-  --help`;
+  --help
 
-// World area → linear scale, matching the v8 page's options
-const AREA_TO_SCALE: Record<string, number> = { '1': 1, '2.25': 1.5, '4': 2 };
+For many runs in parallel, use dist/cli/sweep.js.`;
 
 function fail(msg: string): never { console.error(`error: ${msg}\n\n${HELP}`); process.exit(2); }
 
@@ -46,41 +45,17 @@ function main() {
   const seed = Number(a.seed), ticks = Number(a.ticks);
   if (!Number.isInteger(seed)) fail(`--seed must be an integer, got ${a.seed}`);
   if (!Number.isInteger(ticks) || ticks < 0) fail(`--ticks must be a whole number, got ${a.ticks}`);
-  const scale = AREA_TO_SCALE[a.world];
-  if (!scale) fail(`--world must be 1, 2.25 or 4, got ${a.world}`);
-  if (a.energy !== 'classic' && a.energy !== 'realistic') fail(`--energy must be classic or realistic, got ${a.energy}`);
 
-  const layer = !!a['genome-layer'];
-  const params: Partial<Params> = {
-    energyModel: a.energy, seasons: !!a.seasons,
-    linkage: layer || !!a.linkage, regulation: layer || !!a.regulation, duplication: layer || !!a.duplication,
-  };
-  const config: Partial<Config> = {};
-  for (const kv of a.set) {
-    const eq = kv.indexOf('=');
-    if (eq < 1) fail(`--set expects KEY=VALUE, got ${kv}`);
-    const key = kv.slice(0, eq), raw = kv.slice(eq + 1);
-    if (isConfigKey(key)) {
-      const v = Number(raw);
-      if (raw === '' || !Number.isFinite(v)) fail(`${key} must be a number, got ${raw}`);
-      config[key] = v;
-    } else if (isParamKey(key)) {
-      const def = DEFAULT_PARAMS[key];
-      if (typeof def === 'boolean') {
-        if (raw !== 'true' && raw !== 'false') fail(`${key} must be true or false, got ${raw}`);
-        (params as Record<string, unknown>)[key] = raw === 'true';
-      } else if (typeof def === 'number') {
-        const v = Number(raw);
-        if (raw === '' || !Number.isFinite(v)) fail(`${key} must be a number, got ${raw}`);
-        (params as Record<string, unknown>)[key] = v;
-      } else fail(`use --energy to set ${key}`);
-    } else {
-      fail(`unknown key ${key}. Constants: ${Object.keys(DEFAULT_CONFIG).join(', ')}. Settings: ${Object.keys(DEFAULT_PARAMS).join(', ')}`);
-    }
-  }
+  const settings: Settings = { world: a.world, energy: a.energy, seasons: a.seasons ? 'on' : 'off' };
+  if (a['genome-layer']) settings.layer = 'on';
+  for (const k of ['linkage', 'regulation', 'duplication'] as const) if (a[k]) settings[k] = 'true';
+  try {
+    for (const kv of a.set) { const [k, v] = splitAssignment(kv); settings[k] = v; }
+    for (const [k, v] of Object.entries(settings)) checkSetting(k, v);
+  } catch (e) { if (e instanceof SettingsError) fail(e.message); throw e; }
 
   const started = Date.now();
-  const world = new World({ seed, scale, params, config });
+  const world = new World(worldOptions(seed, settings));
   world.run(ticks);
   const csv = world.toCSV() + '\n';
   if (a.out) writeFileSync(a.out, csv); else process.stdout.write(csv);
