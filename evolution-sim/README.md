@@ -108,7 +108,7 @@ Rules: the engine never imports from `ui/`; all randomness goes through the worl
 `test/baseline/v8-baseline.json` was recorded from the engine inside `legacy/evolution_v8.html`, run unchanged in Node (`scripts/legacy-engine.mjs`). It covers 96 runs: seeds 1, 3, 5, 7, 11 and 42, at 216,000 ticks (60 sim-minutes), at 1× and 4× world area, under both energy formulas, with the genome layer off and on, and with seasons off and on. For each run it keeps the final CSV row and SHA-256 hashes of the CSV and of the log at full floating-point precision.
 
 - `npm test` runs the TypeScript and Python tests. It checks the first 36,000 ticks of 9 of those runs (all seed-42 1× settings and one 4× run), plus settings outside the matrix (immigration, no cloning, other mutation and mating ranges, a regulator knockout, the 2.25× world) directly against the v8 engine. About a minute.
-- `npm run verify` runs all 96 full runs and compares them with the baseline. About 15 minutes on 4 cores.
+- `npm run verify` runs all 96 full runs and compares them with the baseline. About 20 minutes on 4 cores.
 - `npm run baseline` re-records the baseline from the legacy file (about 40 minutes: v8's engine is slower). Do this only for a deliberate behaviour change, in its own commit.
 - `npm run bench` measures ticks per second on three fixed runs.
 

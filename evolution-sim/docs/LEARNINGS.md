@@ -85,4 +85,6 @@ Each science lesson becomes a default or a warning in the sweep tools:
 - **Importing a command-line file runs it.** `sweep.ts` starts a sweep when loaded, so its helpers live in `grid.ts`, where tests can import them safely.
 - **Write results atomically.** The sweep writes `name.csv.partial` and renames it when complete, and rewrites `manifest.json` the same way after every run. A CSV that exists is always complete, so an interrupted sweep can resume.
 - **Don't rebuild `dist/` under a running job.** Long runs import the compiled engine; compile to another folder (`tsc --outDir`) while one is going.
+- **After a squash merge, the branch's old commits are still on the remote.** Pushing new work to the same branch is then rejected. Check that the old tip's content equals what was merged (`git diff <squash-commit> <old-tip>` is empty), then merge it with `-s ours`. Never force-push to get round it.
+- **The page lags the worker by one frame.** A snapshot already on its way can arrive just after you press Pause, so the clock moves once more. A browser test must let in-flight frames settle (about half a second) before checking that a paused clock stays frozen.
 - **The engine's tsconfig has no DOM library.** Using `document` or `window` in `src/engine` is a compile error, which enforces "the engine never touches the DOM" for free.

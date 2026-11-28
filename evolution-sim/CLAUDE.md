@@ -18,6 +18,6 @@ Design the physics, not the organisms. A change fits when it moves a decision fr
 ## Before you finish
 
 1. `npm run typecheck` and `npm test` (TypeScript and Python tests, about a minute).
-2. If you touched `src/engine`: `npm run verify` (all 96 baseline runs, about 15 minutes on 4 cores). It must say "all 96 runs match the baseline exactly".
+2. If you touched `src/engine`: `npm run verify` (all 96 baseline runs, about 20 minutes on 4 cores). It must say "all 96 runs match the baseline exactly".
 3. If the change is meant to alter behaviour: say so in the commit, re-record the baseline (`npm run baseline`) in its own commit, and back the change with a sweep (`npm run sweep`, then `npm run summarise`) of at least 10 seeds before and after.
 4. Add what surprised you to `docs/LEARNINGS.md`, and any real choice to `docs/DECISIONS.md`.
